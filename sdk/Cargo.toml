@@ -1,0 +1,16 @@
+[package]
+name = "edgedb-sdk"
+license = "MIT/Apache-2.0"
+version = "0.1.0"
+authors = ["MagicStack Inc. <hello@magic.io>"]
+edition = "2021"
+description = """
+    EdgeDB SDK for WebAssembly workers
+"""
+
+[dependencies]
+edgedb-client = {version="0.1.0", optional=true} # , features=["wasm"], default-features=false }
+
+[features]
+default = ["edgedb-client"]
+host = []
