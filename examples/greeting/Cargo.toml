@@ -1,0 +1,13 @@
+[package]
+name = "greeting"
+version = "0.1.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
+description = """
+    Minimal example app for EdgeDB WebAssembly SDK
+"""
+authors = ["MagicStack Inc. <hello@magic.io>"]
+publish = false
+
+[dependencies]
+edgedb-sdk = {path="../../sdk"}

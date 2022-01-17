@@ -1,5 +1,11 @@
 commands:
 
+  run: !Command
+    description: Run development server
+    container: ubuntu
+    prerequisites: [make-wasm]
+    run: [cargo, run, "--", --wasm-dir=./target/wasm32-wasi/release]
+
   make: !Command
     description: Build the library and CLI
     container: ubuntu
@@ -10,6 +16,14 @@ commands:
     symlink-name: cargo
     container: ubuntu
     run: [cargo]
+
+  make-wasm: !Command
+    description: Build all example wasm apps
+    container: ubuntu
+    run: |
+      set -ex
+      cargo build --release --target=wasm32-wasi --workspace \
+        --exclude edgedb-wasm-server
 
   test: !Command
     description: Run tests
@@ -28,8 +42,8 @@ containers:
       script: "./install.sh --prefix=/usr \
                 --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
     - !TarInstall
-      url: "https://static.rust-lang.org/dist/rust-std-1.58.0-wasm32-unknown-unknown.tar.gz"
-      script: "./install.sh --prefix=/usr --components=rust-std-wasm32-unknown-unknown"
+      url: "https://static.rust-lang.org/dist/rust-std-1.58.0-wasm32-wasi.tar.gz"
+      script: "./install.sh --prefix=/usr --components=rust-std-wasm32-wasi"
 
     environ: &environ
       HOME: /work/target

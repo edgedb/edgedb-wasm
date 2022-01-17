@@ -7,7 +7,16 @@ edition = "2021"
 description = """
     EdgeDB WebAssembly server
 """
+default-run = "edgedb-wasm-server"
 
 [dependencies]
 edgedb-sdk = { path="../sdk", features=["host"], default-features=false }
-async-std = "1.10.0"
+async-std = { version="1.10.0", features=["attributes"] }
+miette = { version="3.3.0", features=["fancy"] }
+clap = { version="3.0.7", features=["derive"] }
+log = "0.4.14"
+env_logger = "0.9.0"
+tide = "0.16.0"
+wasmer = "2.1.1"
+camino = "1.0.7"
+fn-error-context = "0.2.0"
