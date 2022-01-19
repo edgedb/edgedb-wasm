@@ -17,6 +17,16 @@ commands:
     container: ubuntu
     run: [cargo]
 
+  cargo check: !Command
+    description: Run cargo check (includes wasm)
+    symlink-name: cargo
+    container: ubuntu
+    run: |
+      set -ex
+      cargo check --target=wasm32-wasi --workspace \
+        --exclude edgedb-wasm-server
+      cargo check
+
   make-wasm: !Command
     description: Build all example wasm apps
     container: ubuntu

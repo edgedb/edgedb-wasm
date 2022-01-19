@@ -27,9 +27,16 @@ async fn main() -> miette::Result<()> {
     log::debug!("Options {:#?}", options);
 
     log::info!("Reading wasm files from {:?}", options.wasm_dir);
-    let tentant = Tenant::read_dir(&options.wasm_dir).await?;
+    let tenant = Tenant::read_dir(&options.wasm_dir).await?;
     let mut app = tide::new();
     app.at("/").get(hello);
+    for (name, handler)  in tenant.handlers() {
+        let mut path = format!("/wasm/edgedb/{}", name);
+        log::info!("registering path {:?}", path);
+        app.at(&path).all(handler.clone());
+        path.push_str("/*");
+        app.at(&path).all(handler);
+    }
     app.listen(("127.0.0.1", options.port)).await.into_diagnostic()?;
     Ok(())
 }

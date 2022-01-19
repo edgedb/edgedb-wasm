@@ -470,12 +470,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
 
 [[package]]
-name = "camino"
-version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f3132262930b0522068049f5870a856ab8affc80c70d08b6ecb785771a6fc23"
-
-[[package]]
 name = "cc"
 version = "1.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -821,7 +815,11 @@ checksum = "1fa7c20836c96c60e8a59c8f784b05172e1f2fd0dd4d873173f6a9f8ae19730a"
 name = "edgedb-sdk"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "edgedb-client",
+ "http-types",
+ "minicbor",
+ "thiserror",
 ]
 
 [[package]]
@@ -829,7 +827,7 @@ name = "edgedb-wasm-server"
 version = "0.1.0"
 dependencies = [
  "async-std",
- "camino",
+ "async-trait",
  "clap",
  "edgedb-sdk",
  "env_logger",
@@ -1396,6 +1394,26 @@ name = "miette-derive"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c01a8b61312d367ce87956bb686731f87e4c6dd5dbc550e8f06e3c24fb1f67f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "minicbor"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51aa5bb0ca22415daca596a227b507f880ad1b2318a87fa9325312a5d285ca0d"
+dependencies = [
+ "minicbor-derive",
+]
+
+[[package]]
+name = "minicbor-derive"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54999f917cd092b13904737e26631aa2b2b88d625db68e4bab461dcd8006c788"
 dependencies = [
  "proc-macro2",
  "quote",
