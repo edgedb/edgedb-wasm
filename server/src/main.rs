@@ -1,7 +1,7 @@
 mod options;
 mod tenant;
 
-use miette::IntoDiagnostic;
+use anyhow::Context;
 use clap::Parser;
 
 use options::Options;
@@ -20,8 +20,8 @@ pub fn init_logging() {
     builder.init();
 }
 
-#[async_std::main]
-async fn main() -> miette::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let options = Options::parse();
     init_logging();
     log::debug!("Options {:#?}", options);
@@ -37,6 +37,6 @@ async fn main() -> miette::Result<()> {
         path.push_str("/*");
         app.at(&path).all(handler);
     }
-    app.listen(("127.0.0.1", options.port)).await.into_diagnostic()?;
+    app.listen(("127.0.0.1", options.port)).await.context("error listening")?;
     Ok(())
 }

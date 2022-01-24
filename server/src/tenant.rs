@@ -1,20 +1,19 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::fmt;
 
-use async_std::fs;
-use async_std::path::{Path, PathBuf};
-use async_std::stream::StreamExt;
-use miette::{IntoDiagnostic, Context};
+use tokio::fs;
+use anyhow::Context;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Worker(Arc<WorkerInner>);
 
-#[derive(Debug)]
 struct WorkerInner {
     name: String,
     path: PathBuf,
-    store: wasmer::Store,
-    instance: wasmer::Instance,
+    store: wasmtime::Store<wasmtime_wasi::WasiCtx>,
+    instance: wasmtime::Instance,
 }
 
 #[derive(Debug)]
@@ -39,16 +38,15 @@ fn is_valid_name(name: &str) -> bool {
 }
 
 impl Tenant {
-    pub async fn read_dir(dir: impl AsRef<Path>) -> miette::Result<Tenant> {
+    pub async fn read_dir(dir: impl AsRef<Path>) -> anyhow::Result<Tenant> {
         Tenant::_read_dir(dir.as_ref()).await
-            .wrap_err("failed to read WebAssembly directory")
+            .context("failed to read WebAssembly directory")
     }
-    async fn _read_dir(dir: &Path) -> miette::Result<Tenant> {
+    async fn _read_dir(dir: &Path) -> anyhow::Result<Tenant> {
         let mut workers = HashMap::new();
-        let mut dir_iter = fs::read_dir(dir).await.into_diagnostic()?;
+        let mut dir_iter = fs::read_dir(dir).await?;
         let mut tasks = Vec::new();
-        while let Some(entry) = dir_iter.next().await {
-            let item = entry.into_diagnostic()?;
+        while let Some(item) = dir_iter.next_entry().await? {
             let path = item.path();
             if !matches!(path.extension(), Some(e) if e == "wasm") {
                 continue;
@@ -86,19 +84,28 @@ impl Tenant {
 }
 
 impl Worker {
-    async fn new(name: String, path: PathBuf) -> miette::Result<Worker> {
-        let data = fs::read(&path).await.into_diagnostic()?;
-        let store = wasmer::Store::default();
-        let module = wasmer::Module::new(&store, data).into_diagnostic()?;
-        let mut wasi_env = wasmer_wasi::WasiState::new(&name).finalize()
-            .into_diagnostic().wrap_err("failed to finalize wasi state")?;
-        let imports = wasi_env.import_object(&module)
-            .into_diagnostic().wrap_err("failed to resolve imports")?;
-        let instance = wasmer::Instance::new(&module, &imports)
-            .into_diagnostic().wrap_err("instance init failed")?;
-        let main = instance.exports.get_function("_start")
-            .into_diagnostic().wrap_err("get main(_start) function")?;
-        main.call(&[]).into_diagnostic().wrap_err("call main function")?;
+    async fn new(name: String, path: PathBuf) -> anyhow::Result<Worker> {
+        let data = fs::read(&path).await
+            .with_context(|| format!("cannot read {path:?}"))?;
+        let engine = wasmtime::Engine::new(
+            wasmtime::Config::new()
+            .async_support(true)
+        ).context("cannot create engine")?;
+        let wasi = wasmtime_wasi::sync::WasiCtxBuilder::new()
+            .inherit_stdio() // temporary
+            .build();
+        let mut store = wasmtime::Store::new(&engine, wasi);
+        let module = wasmtime::Module::new(&engine, data)
+            .context("cannot initialize module")?;
+        let mut linker = wasmtime::Linker::new(&engine);
+        wasmtime_wasi::add_to_linker(&mut linker, |s| s)
+            .context("error linking WASI")?;
+
+        let instance = linker.instantiate(&mut store, &module)?;
+        let main = instance.get_typed_func::<(), (), _>(&mut store, "_start")
+            .context("get main(_start) function")?;
+        main.call_async(&mut store, ()).await.context("call main function")?;
+
         Ok(Worker(Arc::new(WorkerInner {
             name,
             path,
@@ -120,5 +127,16 @@ impl Handler {
 impl tide::Endpoint<()> for Handler {
     async fn call(&self, req: tide::Request<()>) -> tide::Result {
         todo!();
+    }
+}
+
+impl fmt::Debug for Worker {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Worker")
+            // TODO(tailhook) add tenant name?
+            .field("name", &self.0.name)
+            .field("path", &self.0.path.display())
+            // TODO(tailhook) add some running info
+            .finish()
     }
 }
