@@ -1,7 +1,10 @@
-#[cfg_attr(feature="host", allow(dead_code))]
+#![cfg_attr(feature="host", allow(dead_code))]
+
 pub use log::*;
 
-wit_bindgen_rust::import!("./wit/log_v1.wit");
+wit_bindgen_rust::import!("./wit/edgedb_log_v1.wit");
+
+use edgedb_log_v1 as v1;
 
 static mut LOGGER: HostLogger = HostLogger {
     max_level: log::STATIC_MAX_LEVEL,
@@ -11,9 +14,9 @@ struct HostLogger {
     max_level: log::LevelFilter,
 }
 
-impl From<log::Level> for log_v1::Level {
-    fn from(value: log::Level) -> log_v1::Level {
-        use log_v1::Level as T;
+impl From<log::Level> for v1::Level {
+    fn from(value: log::Level) -> v1::Level {
+        use v1::Level as T;
         use log::Level as S;
 
         match value {
@@ -26,9 +29,9 @@ impl From<log::Level> for log_v1::Level {
     }
 }
 
-fn convert_filter(value: Option<log_v1::Level>) -> log::LevelFilter {
+fn convert_filter(value: Option<v1::Level>) -> log::LevelFilter {
     use log::LevelFilter as T;
-    use log_v1::Level as S;
+    use v1::Level as S;
 
     match value {
         None => T::Off,
@@ -42,7 +45,7 @@ fn convert_filter(value: Option<log_v1::Level>) -> log::LevelFilter {
 
 #[cfg(not(feature="host"))]
 pub fn init() {
-    let level = convert_filter(log_v1::max_level());
+    let level = convert_filter(v1::max_level());
     unsafe {
         // not sure if safe all all platforms
         LOGGER.max_level = level;
@@ -60,7 +63,7 @@ impl log::Log for HostLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            log_v1::log(log_v1::LogRecord {
+            v1::log(v1::LogRecord {
                 target: record.target(),
                 level: record.level().into(),
                 message: &record.args().to_string(),

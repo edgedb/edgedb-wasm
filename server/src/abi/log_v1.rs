@@ -1,14 +1,16 @@
 use crate::worker;
 
-wit_bindgen_wasmtime::export!("./wit/log_v1.wit");
+wit_bindgen_wasmtime::export!("./wit/edgedb_log_v1.wit");
 
-pub use log_v1::add_to_linker;
+use edgedb_log_v1 as v1;
+
+pub use edgedb_log_v1::add_to_linker;
 
 
-impl Into<log::Level> for log_v1::Level {
+impl Into<log::Level> for v1::Level {
     fn into(self) -> log::Level {
         use log::Level as T;
-        use log_v1::Level as S;
+        use v1::Level as S;
 
         match self {
             S::Error => T::Error,
@@ -20,9 +22,9 @@ impl Into<log::Level> for log_v1::Level {
     }
 }
 
-fn convert_level(value: log::LevelFilter) -> Option<log_v1::Level> {
+fn convert_level(value: log::LevelFilter) -> Option<v1::Level> {
     use log::LevelFilter as S;
-    use log_v1::Level as T;
+    use v1::Level as T;
 
     match value {
         S::Off => None,
@@ -34,8 +36,8 @@ fn convert_level(value: log::LevelFilter) -> Option<log_v1::Level> {
     }
 }
 
-impl log_v1::LogV1 for worker::State {
-    fn log(&mut self, value: log_v1::LogRecord) {
+impl v1::EdgedbLogV1 for worker::State {
+    fn log(&mut self, value: v1::LogRecord) {
         let target =
             format!("wasm::{}::{}::{}", self.tenant, self.worker, value.target);
         let meta = log::MetadataBuilder::new()
@@ -50,7 +52,7 @@ impl log_v1::LogV1 for worker::State {
             .module_path(value.module_path)
             .build());
     }
-    fn max_level(&mut self) -> Option<log_v1::Level> {
+    fn max_level(&mut self) -> Option<v1::Level> {
         convert_level(log::max_level())
     }
 }
