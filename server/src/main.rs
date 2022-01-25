@@ -1,5 +1,7 @@
+mod abi;
 mod options;
 mod tenant;
+mod worker;
 
 use anyhow::Context;
 use clap::Parser;
@@ -16,6 +18,7 @@ pub fn init_logging() {
         env_logger::Env::default().default_filter_or("warn")
     );
     builder.filter_module("tide", log::LevelFilter::Info);
+    builder.filter_module("wasm", log::LevelFilter::Info);
     builder.filter_module("edgedb_wasm_server", log::LevelFilter::Info);
     builder.init();
 }
@@ -27,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
     log::debug!("Options {:#?}", options);
 
     log::info!("Reading wasm files from {:?}", options.wasm_dir);
-    let tenant = Tenant::read_dir(&options.wasm_dir).await?;
+    let tenant = Tenant::read_dir("default", &options.wasm_dir).await?;
     let mut app = tide::new();
     app.at("/").get(hello);
     for (name, handler)  in tenant.handlers() {

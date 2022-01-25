@@ -1,0 +1,20 @@
+enum level {
+    error,
+    warn,
+    info,
+    debug,
+    trace,
+}
+
+record log-record {
+    level: level,
+    target: string,
+    module-path: option<string>,
+    file: option<string>,
+    line: option<u32>,
+    message: string,
+}
+
+log: function(item: log-record)
+// none -- means logging is off
+max-level: function() -> option<level>

@@ -17,6 +17,12 @@ commands:
     container: ubuntu
     run: [cargo]
 
+  wit-bindgen: !Command
+    description: Run wit-bindgen command
+    symlink-name: cargo
+    container: tools
+    run: [wit-bindgen]
+
   cargo check: !Command
     description: Run cargo check (includes wasm)
     symlink-name: cargo
@@ -26,6 +32,15 @@ commands:
       cargo check --target=wasm32-wasi --workspace \
         --exclude edgedb-wasm-server
       cargo check
+
+  make-wit: !Command
+    description: Generate Rust files from "*.wit"
+    container: tools
+    run: |
+      wit-bindgen wasmtime \
+        --export wit/http-server-v1-wasm.wit \
+        --import wit/http-server-v1-host.wit \
+        --rustfmt --out-dir server/src/generated
 
   make-wasm: !Command
     description: Build all example wasm apps
@@ -54,7 +69,12 @@ containers:
     - !TarInstall
       url: "https://static.rust-lang.org/dist/rust-std-1.58.0-wasm32-wasi.tar.gz"
       script: "./install.sh --prefix=/usr --components=rust-std-wasm32-wasi"
-
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-std-1.58.0-wasm32-unknown-unknown.tar.gz"
+      script: "./install.sh --prefix=/usr --components=rust-std-wasm32-unknown-unknown"
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rustfmt-1.57.0-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr"
     environ: &environ
       HOME: /work/target
       LANG: en_US.UTF-8
@@ -63,5 +83,7 @@ containers:
   tools:
     setup:
     - !Container ubuntu
-    - !Sh 'cargo install cargo-fuzz cargo-outdated cargo-bloat --root=/usr'
+    - !Install [libssl-dev, pkg-config]
+    - !Sh 'cargo install cargo-outdated --root=/usr'
+    - !Sh "cargo install --root=/usr --git https://github.com/bytecodealliance/wit-bindgen wit-bindgen-cli wasmlink-cli"
     environ: *environ
