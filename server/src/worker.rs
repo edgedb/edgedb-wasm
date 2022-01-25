@@ -54,6 +54,20 @@ impl Worker {
             .context("error linking edgedb_log_v1")?;
 
         let instance = linker.instantiate(&mut store, &module)?;
+        let init_func = instance.get_typed_func::<(), (), _>(
+            &mut store,
+            "_edgedb_sdk_init"
+        );
+        match init_func {
+            Ok(init_func) => {
+                init_func.call_async(&mut store, ()).await
+                    .context("SDK init function")?;
+            }
+            Err(e) => {
+                // TODO(tailhook) do not crash if not found
+                log::warn!("Cannot initialize EdgeDB SDK: {:#}", e);
+            }
+        }
         let main = instance.get_typed_func::<(), (), _>(&mut store, "_start")
             .context("get main(_start) function")?;
         main.call_async(&mut store, ()).await.context("call main function")?;

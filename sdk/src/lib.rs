@@ -4,6 +4,7 @@ pub mod http;
 pub mod log;
 
 #[cfg(not(feature="host"))]
-pub fn init() {
+#[export_name = "_edgedb_sdk_init"]
+extern "C" fn init() {
     log::init();
 }
