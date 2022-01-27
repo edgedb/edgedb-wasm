@@ -1,5 +1,5 @@
 pub mod bug;
-pub mod http;
+pub mod http_server;
 
 pub mod log;
 

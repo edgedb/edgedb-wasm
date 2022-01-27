@@ -53,7 +53,6 @@ pub fn init() {
         log::set_logger(&LOGGER).expect("init_logging");
     }
     log::set_max_level(level);
-    println!("INITED");
 }
 
 impl log::Log for HostLogger {

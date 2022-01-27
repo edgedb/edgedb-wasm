@@ -38,8 +38,12 @@ fn convert_level(value: log::LevelFilter) -> Option<v1::Level> {
 
 impl v1::EdgedbLogV1 for worker::State {
     fn log(&mut self, value: v1::LogRecord) {
-        let target =
-            format!("wasm::{}::{}::{}", self.tenant, self.worker, value.target);
+        let target = format!(
+            "wasm::{}::{}::{}",
+            self.name.tenant,
+            self.name.worker,
+            value.target,
+        );
         let meta = log::MetadataBuilder::new()
             .target(&target)
             .level(value.level.into())

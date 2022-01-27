@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use tokio::fs;
 use anyhow::Context;
 
 use crate::worker;
 
+#[derive(Debug, Clone)]
+pub struct Tenant(Arc<TenantInner>);
+
 #[derive(Debug)]
-pub struct Tenant {
+struct TenantInner {
     // TODO(tailhook) maybe set of workers?
     workers: HashMap<String, worker::Worker>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Handler {
-    worker: worker::Worker,
-}
 
 fn is_valid_name(name: &str) -> bool {
     let mut chars = name.chars();
@@ -75,28 +75,30 @@ impl Tenant {
             }
         }
         log::info!("Read {} wasm files", workers.len());
-        Ok(Tenant { workers })
+        Ok(Tenant(Arc::new(TenantInner { workers })))
     }
 
-    pub fn handlers(&self) -> impl Iterator<Item=(&str, Handler)> {
-        self.workers.iter().map(|(name, worker)| {
-            (&name[..], Handler::new(worker))
-        })
-    }
-}
-
-
-impl Handler {
-    fn new(worker: &worker::Worker) -> Handler {
-        Handler {
-            worker: worker.clone(),
+    pub async fn handle(self, req: hyper::Request<hyper::Body>)
+        -> hyper::Result<hyper::Response<hyper::Body>>
+    {
+        if let Some(suffix) = req.uri().path().strip_prefix("/db/default/") {
+            let name_end = suffix.find('/').unwrap_or(suffix.len());
+            let wasm_name = &suffix[..name_end];
+            if let Some(worker) = self.0.workers.get(wasm_name) {
+                worker.handle_http(req).await
+            } else {
+                // TODO(tailhook) only in debug mode
+                Ok(hyper::Response::builder()
+                    .status(hyper::StatusCode::NOT_FOUND)
+                    .body(format!("No wasm named {wasm_name} found").into())
+                    .expect("can compose static response"))
+            }
+        } else {
+            // TODO(tailhook) only in debug mode
+            Ok(hyper::Response::builder()
+                .status(hyper::StatusCode::NOT_FOUND)
+                .body(b"Try /db/default/<wasm-file-name>/"[..].into())
+                .expect("can compose static response"))
         }
-    }
-}
-
-#[async_trait::async_trait]
-impl tide::Endpoint<()> for Handler {
-    async fn call(&self, req: tide::Request<()>) -> tide::Result {
-        todo!();
     }
 }

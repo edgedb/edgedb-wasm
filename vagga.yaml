@@ -23,7 +23,7 @@ commands:
     container: tools
     run: [wit-bindgen]
 
-  cargo check: !Command
+  check: !Command
     description: Run cargo check (includes wasm)
     symlink-name: cargo
     container: ubuntu
@@ -33,15 +33,6 @@ commands:
         --exclude edgedb-wasm-server
       cargo check
 
-  make-wit: !Command
-    description: Generate Rust files from "*.wit"
-    container: tools
-    run: |
-      wit-bindgen wasmtime \
-        --export wit/http-server-v1-wasm.wit \
-        --import wit/http-server-v1-host.wit \
-        --rustfmt --out-dir server/src/generated
-
   make-wasm: !Command
     description: Build all example wasm apps
     container: ubuntu
@@ -49,6 +40,12 @@ commands:
       set -ex
       cargo build --release --target=wasm32-wasi --workspace \
         --exclude edgedb-wasm-server
+
+  expand: !Command
+    description: Run cargo expand
+    symlink-name: cargo
+    container: nightly
+    run: [cargo, expand]
 
   test: !Command
     description: Run tests
@@ -87,3 +84,18 @@ containers:
     - !Sh 'cargo install cargo-outdated --root=/usr'
     - !Sh "cargo install --root=/usr --git https://github.com/bytecodealliance/wit-bindgen wit-bindgen-cli wasmlink-cli"
     environ: *environ
+
+  nightly:
+    setup:
+    - !Ubuntu focal
+    - !Install [ca-certificates, git, build-essential, vim]
+
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr \
+                --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
+    - !Sh 'cargo install cargo-expand --root=/usr'
+
+    environ:
+      HOME: /work/target
+      RUST_BACKTRACE: 1

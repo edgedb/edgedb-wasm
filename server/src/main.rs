@@ -3,15 +3,17 @@ mod options;
 mod tenant;
 mod worker;
 
+use std::convert::Infallible;
+use std::net::SocketAddr;
+
 use anyhow::Context;
 use clap::Parser;
+use hyper::{Server};
+use hyper::service::{make_service_fn, service_fn};
 
 use options::Options;
 use tenant::Tenant;
 
-async fn hello(_req: tide::Request<()>) -> tide::Result {
-    Ok(format!("Hello world!").into())
-}
 
 pub fn init_logging() {
     let mut builder = env_logger::Builder::from_env(
@@ -31,15 +33,19 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Reading wasm files from {:?}", options.wasm_dir);
     let tenant = Tenant::read_dir("default", &options.wasm_dir).await?;
-    let mut app = tide::new();
-    app.at("/").get(hello);
-    for (name, handler)  in tenant.handlers() {
-        let mut path = format!("/wasm/edgedb/{}", name);
-        log::info!("registering path {:?}", path);
-        app.at(&path).all(handler.clone());
-        path.push_str("/*");
-        app.at(&path).all(handler);
-    }
-    app.listen(("127.0.0.1", options.port)).await.context("error listening")?;
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], options.port));
+
+    let make_svc = make_service_fn(|_conn| {
+        let tenant = tenant.clone();
+        async move {
+            Ok::<_, Infallible>(service_fn(move |req| {
+                tenant.clone().handle(req)
+            }))
+        }
+    });
+
+    Server::bind(&addr).serve(make_svc).await.context("error serving HTTP")?;
+
     Ok(())
 }

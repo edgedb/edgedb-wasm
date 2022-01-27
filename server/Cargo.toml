@@ -14,11 +14,12 @@ edgedb-sdk = { path="../sdk", features=["host"], default-features=false }
 clap = { version="3.0.7", features=["derive"] }
 log = "0.4.14"
 env_logger = "0.9.0"
-tide = "0.16.0"
 wasmtime = { version="0.33.0", features=["async"] }
 wasmtime-wasi = "0.33.0"
 fn-error-context = "0.2.0"
 async-trait = "0.1.52"
 anyhow = "1.0.52"
 tokio = { version="1.15", features=["fs", "rt-multi-thread", "macros"] }
-wit-bindgen-wasmtime = { git="https://github.com/bytecodealliance/wit-bindgen/" }
+#wit-bindgen-wasmtime = { git="https://github.com/bytecodealliance/wit-bindgen/", features=["async"] }
+wit-bindgen-wasmtime = { git="https://github.com/tailhook/wit-bindgen/", features=["async"], branch="fix_async_copy_slice" }
+hyper = { version="0.14.16", features=["server", "tcp", "http1", "http2"] }

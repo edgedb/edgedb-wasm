@@ -1,0 +1,14 @@
+record request {
+    method: string,
+    uri: string,
+    headers: list<tuple<list<u8>, list<u8>>>,
+    body: list<u8>,
+}
+
+record response {
+    status-code: u16,
+    headers: list<tuple<list<u8>, list<u8>>>,
+    body: list<u8>,
+}
+
+handle-request: function(request: request) -> response
