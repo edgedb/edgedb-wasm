@@ -1,4 +1,9 @@
-use edgedb_sdk::log;
+use edgedb_sdk::{log, web};
+
+#[web::handler]
+fn handler(req: web::Request) -> web::Response {
+    todo!();
+}
 
 fn main() {
     log::warn!("Hello from Wasm!");

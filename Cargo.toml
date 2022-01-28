@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "sdk",
+    "macros",
     "server",
     "examples/greeting",
 ]
+exclude = ["wit-bindgen"]

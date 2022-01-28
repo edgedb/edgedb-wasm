@@ -440,11 +440,22 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "edgedb-client",
+ "edgedb-sdk-macros",
  "http",
  "log",
  "minicbor",
  "thiserror",
  "wit-bindgen-rust",
+]
+
+[[package]]
+name = "edgedb-sdk-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1936,10 +1947,9 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-gen-core"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice#9e9edff52bff0069a3484cecca465662f15871da"
 dependencies = [
  "anyhow",
- "wit-parser 0.1.0 (git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice)",
+ "wit-parser 0.1.0",
 ]
 
 [[package]]
@@ -1954,10 +1964,9 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-gen-rust"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice#9e9edff52bff0069a3484cecca465662f15871da"
 dependencies = [
  "heck 0.3.3",
- "wit-bindgen-gen-core 0.1.0 (git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice)",
+ "wit-bindgen-gen-core 0.1.0",
 ]
 
 [[package]]
@@ -1982,11 +1991,10 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-gen-wasmtime"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice#9e9edff52bff0069a3484cecca465662f15871da"
 dependencies = [
  "heck 0.3.3",
- "wit-bindgen-gen-core 0.1.0 (git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice)",
- "wit-bindgen-gen-rust 0.1.0 (git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice)",
+ "wit-bindgen-gen-core 0.1.0",
+ "wit-bindgen-gen-rust 0.1.0",
 ]
 
 [[package]]
@@ -2013,7 +2021,6 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-wasmtime"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice#9e9edff52bff0069a3484cecca465662f15871da"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2026,18 +2033,16 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-wasmtime-impl"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice#9e9edff52bff0069a3484cecca465662f15871da"
 dependencies = [
  "proc-macro2",
  "syn",
- "wit-bindgen-gen-core 0.1.0 (git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice)",
+ "wit-bindgen-gen-core 0.1.0",
  "wit-bindgen-gen-wasmtime",
 ]
 
 [[package]]
 name = "wit-parser"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/wit-bindgen/?branch=fix_async_copy_slice#9e9edff52bff0069a3484cecca465662f15871da"
 dependencies = [
  "anyhow",
  "id-arena",

@@ -1,6 +1,6 @@
 pub mod bug;
 pub mod http_server;
-
+pub mod web;
 pub mod log;
 
 #[cfg(not(feature="host"))]

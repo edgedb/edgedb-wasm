@@ -9,6 +9,7 @@ description = """
 """
 
 [dependencies]
+edgedb-sdk-macros = {path="../macros"}
 edgedb-client = {version="0.1.0", optional=true} # , features=["wasm"], default-features=false }
 minicbor = {version="0.8.0", features=["derive", "std"]}
 http = {version="0.2.6", default-features=false}
