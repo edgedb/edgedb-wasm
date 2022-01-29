@@ -6,6 +6,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use tokio::fs;
 use tokio::sync::Mutex;
+use wasmtime::Instance;
 
 use crate::abi;
 
@@ -28,8 +29,50 @@ pub struct State {
 struct WorkerInner {
     name: Arc<Name>,
     store: Mutex<wasmtime::Store<State>>,
-    instance: wasmtime::Instance,
+    instance: Instance,
     http_server_v1: Option<abi::http_server_v1::Handler<State>>,
+}
+
+async fn call_init(store: &mut wasmtime::Store<State>, instance: &Instance)
+    -> anyhow::Result<()>
+{
+    let mut pre_init = None;
+    let mut post_init = None;
+    let init_funcs = instance.exports(&mut *store).filter_map(|e| {
+        match e.name() {
+            "_edgedb_sdk_pre_init" => {
+                pre_init = e.into_func();
+                None
+            }
+            "_edgedb_sdk_post_init" => {
+                post_init = e.into_func();
+                None
+            }
+            name if name.starts_with("_edgedb_sdk_init_") => {
+                e.into_func()
+            }
+            _ => None,
+        }
+    }).collect::<Vec<_>>();
+    if let Some(pre_init) = pre_init {
+        pre_init.typed(&mut *store)
+            .with_context(|| format!("{:?} has wrong type", pre_init))?
+            .call_async(&mut *store, ()).await
+            .with_context(|| format!("error calling {:?}", pre_init))?;
+    }
+    for init_func in init_funcs {
+        init_func.typed(&mut *store)
+            .with_context(|| format!("{:?} has wrong type", init_func))?
+            .call_async(&mut *store, ()).await
+            .with_context(|| format!("error calling {:?}", init_func))?;
+    }
+    if let Some(post_init) = post_init {
+        post_init.typed(&mut *store)
+            .with_context(|| format!("{:?} has wrong type", post_init))?
+            .call_async(&mut *store, ()).await
+            .with_context(|| format!("error calling {:?}", post_init))?;
+    }
+    Ok(())
 }
 
 impl Worker {
@@ -78,20 +121,7 @@ impl Worker {
             &mut store, &instance, |s: &mut State| &mut s.http_server_v1)
             .context("error reading edgedb_http_server_v1 handler")?;
 
-        let init_func = instance.get_typed_func::<(), (), _>(
-            &mut store,
-            "_edgedb_sdk_init"
-        );
-        match init_func {
-            Ok(init_func) => {
-                init_func.call_async(&mut store, ()).await
-                    .context("SDK init function")?;
-            }
-            Err(e) => {
-                // TODO(tailhook) do not crash if not found
-                log::warn!("Cannot initialize EdgeDB SDK: {:#}", e);
-            }
-        }
+        call_init(&mut store, &instance).await?;
         let main = instance.get_typed_func::<(), (), _>(&mut store, "_start")
             .context("get main(_start) function")?;
         main.call_async(&mut store, ()).await.context("call main function")?;
