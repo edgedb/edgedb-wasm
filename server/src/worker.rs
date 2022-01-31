@@ -24,6 +24,7 @@ pub struct State {
     pub name: Arc<Name>,
     pub wasi: wasmtime_wasi::WasiCtx,
     pub http_server_v1: abi::http_server_v1::State,
+    pub client_v1: abi::client_v1::State,
 }
 
 struct WorkerInner {
@@ -31,6 +32,12 @@ struct WorkerInner {
     store: Mutex<wasmtime::Store<State>>,
     instance: Instance,
     http_server_v1: Option<abi::http_server_v1::Handler<State>>,
+}
+
+impl State {
+    fn client_v1(&mut self) -> abi::client_v1::Context {
+        self.client_v1.context()
+    }
 }
 
 async fn call_init(store: &mut wasmtime::Store<State>, instance: &Instance)
@@ -103,6 +110,7 @@ impl Worker {
             name: name.clone(),
             wasi,
             http_server_v1: Default::default(),
+            client_v1: Default::default(),
         };
         let mut store = wasmtime::Store::new(&engine, state);
         let module = wasmtime::Module::new(&engine, data)
@@ -112,6 +120,8 @@ impl Worker {
             .context("error linking WASI")?;
         abi::log_v1::add_to_linker(&mut linker, |s| s)
             .context("error linking edgedb_log_v1")?;
+        abi::client_v1::add_to_linker(&mut linker, State::client_v1)
+            .context("error linking edgedb_client_v1")?;
         abi::http_server_v1::Handler::add_to_linker(
             &mut linker, |s: &mut State| &mut s.http_server_v1)
             .context("error linking edgedb_http_server_v1")?;

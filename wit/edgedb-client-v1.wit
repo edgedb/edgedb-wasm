@@ -1,0 +1,17 @@
+record response {
+    data: list<u8>,
+}
+
+record error {
+    code: u32,
+    messages: list<string>,
+    error: option<string>,
+    headers: list<tuple<u16, list<u8>>>,
+}
+
+resource client {
+    static connect: function() -> client
+    query: function(query: string, arguments: list<u8>)
+        -> expected<response, error>
+}
+

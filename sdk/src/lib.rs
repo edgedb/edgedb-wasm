@@ -1,4 +1,5 @@
 pub mod bug;
+pub mod client;
 pub mod http_server;
 pub mod web;
 pub mod log;
