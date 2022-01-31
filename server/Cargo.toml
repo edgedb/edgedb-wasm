@@ -20,7 +20,5 @@ fn-error-context = "0.2.0"
 async-trait = "0.1.52"
 anyhow = "1.0.52"
 tokio = { version="1.15", features=["fs", "rt-multi-thread", "macros"] }
-#wit-bindgen-wasmtime = { git="https://github.com/bytecodealliance/wit-bindgen/", features=["async"] }
-#wit-bindgen-wasmtime = { git="https://github.com/tailhook/wit-bindgen/", features=["async"], branch="fix_async_copy_slice" }
-wit-bindgen-wasmtime = { path="../wit-bindgen/crates/wasmtime", features=["async"] }
+wit-bindgen-wasmtime = { git="https://github.com/bytecodealliance/wit-bindgen/", features=["async"] }
 hyper = { version="0.14.16", features=["server", "tcp", "http1", "http2"] }
