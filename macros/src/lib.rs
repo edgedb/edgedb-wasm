@@ -4,7 +4,7 @@ use quote::quote;
 
 #[proc_macro_error::proc_macro_error]
 #[proc_macro_attribute]
-pub fn web_handler(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn web_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::ItemFn);
     let func_name = &input.sig.ident;
     let hook_name = quote::format_ident!(

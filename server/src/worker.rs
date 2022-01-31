@@ -30,6 +30,7 @@ pub struct State {
 struct WorkerInner {
     name: Arc<Name>,
     store: Mutex<wasmtime::Store<State>>,
+    #[allow(dead_code)] // TODO
     instance: Instance,
     http_server_v1: Option<abi::http_server_v1::Handler<State>>,
 }

@@ -6,7 +6,7 @@ fn init_hook() {
 }
 
 #[web::handler]
-fn handler(req: web::Request) -> web::Response {
+fn handler(_req: web::Request) -> web::Response {
     web::response()
         .status(web::StatusCode::OK)
         .header("Content-Type", "text/html")

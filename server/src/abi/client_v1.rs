@@ -38,7 +38,7 @@ impl v1::EdgedbClientV1 for InnerState {
         }
     }
     async fn client_query(&mut self,
-                          me: &Client, query: &str, arguments: &[u8])
+                          _me: &Client, _query: &str, _arguments: &[u8])
         -> Result<v1::Response, v1::Error>
     {
         todo!();
