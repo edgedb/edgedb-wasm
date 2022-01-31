@@ -17,6 +17,7 @@ anyhow = "1.0.52"
 thiserror = "1.0.30"
 wit-bindgen-rust = { git="https://github.com/bytecodealliance/wit-bindgen/" }
 log = "0.4.14"
+once_cell = "1.9.0"
 
 [features]
 default = ["edgedb-client"]

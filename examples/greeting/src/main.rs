@@ -7,7 +7,11 @@ fn init_hook() {
 
 #[web::handler]
 fn handler(req: web::Request) -> web::Response {
-    todo!();
+    web::response()
+        .status(web::StatusCode::OK)
+        .header("Content-Type", "text/html")
+        .body(b"Hello from <b>wasm</b>!".to_vec())
+        .expect("response is built")
 }
 
 fn main() {

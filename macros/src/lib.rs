@@ -5,9 +5,19 @@ use quote::quote;
 #[proc_macro_error::proc_macro_error]
 #[proc_macro_attribute]
 pub fn web_handler(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let stream = proc_macro2::TokenStream::from(item);
-    // TODO(tailhook) register this item in global registry using init_hook
-    stream.into()
+    let input = syn::parse_macro_input!(item as syn::ItemFn);
+    let func_name = &input.sig.ident;
+    let hook_name = quote::format_ident!(
+        "_edgedb_sdk_init_web_handler_{}", func_name);
+    quote! {
+        #input
+
+        #[export_name = stringify!(#hook_name)]
+        extern fn #hook_name() {
+            ::edgedb_sdk::web::register_handler(#func_name);
+        }
+
+    }.into()
 }
 
 #[proc_macro_error::proc_macro_error]

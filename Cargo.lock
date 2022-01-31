@@ -444,6 +444,7 @@ dependencies = [
  "http",
  "log",
  "minicbor",
+ "once_cell",
  "thiserror",
  "wit-bindgen-rust",
 ]
