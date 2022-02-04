@@ -2,6 +2,20 @@ record response {
     data: list<u8>,
 }
 
+enum io-format {
+    binary,
+    json,
+    json-elements,
+}
+
+enum cardinality {
+    no-result,
+    at-most-one,
+    one,
+    many,
+    at-least-one,
+}
+
 record error {
     code: u32,
     messages: list<string>,
@@ -9,9 +23,54 @@ record error {
     headers: list<tuple<u16, list<u8>>>,
 }
 
+flags capabilities {
+    modifications,
+    session-config,
+    transaction,
+    ddl,
+    persistent-config,
+}
+
+record prepare-query {
+    // headers
+    implicit-limit: option<u64>,
+    implicit-typenames: bool,
+    implicit-typeids: bool,
+    allow-capabilities: capabilities,
+    explicit-objectids: bool,
+
+    io-format: io-format,
+    expected-cardinality: cardinality,
+    command: string,
+}
+
+record prepare-complete {
+    query: query,
+    capabilities: capabilities,
+    cardinality: cardinality,
+    input-typespec-id: string,
+    output-typespec-id: string,
+}
+
+record data-description {
+    result-cardinality: bool,
+    input-typespec-id: string,
+    input-typedesc: list<u8>,
+    output-typespec-id: string,
+    output-typedesc: list<u8>,
+}
+record data {
+    chunks: list<list<u8>>,
+}
+
+resource query {
+    describe-data: function() -> expected<data-description, error>
+    execute: function(arguments: list<u8>) -> expected<data, error>
+}
+
 resource client {
     static connect: function() -> client
-    query: function(query: string, arguments: list<u8>)
-        -> expected<response, error>
+    prepare: function(query: prepare-query)
+        -> expected<prepare-complete, error>
 }
 

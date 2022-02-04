@@ -9,6 +9,7 @@ use tokio::sync::Mutex;
 use wasmtime::Instance;
 
 use crate::abi;
+use crate::tenant::Common;
 
 #[derive(Clone)]
 pub struct Worker(Arc<WorkerInner>);
@@ -90,7 +91,8 @@ impl Worker {
     pub fn full_name(&self) -> &Name {
         &*self.0.name
     }
-    pub async fn new(tenant: String, name: String, path: PathBuf)
+    pub async fn new(tenant: String, name: String, path: PathBuf,
+                     common: Common)
         -> anyhow::Result<Worker>
     {
         let data = fs::read(&path).await
@@ -111,7 +113,7 @@ impl Worker {
             name: name.clone(),
             wasi,
             http_server_v1: Default::default(),
-            client_v1: Default::default(),
+            client_v1: abi::client_v1::State::new(&common.client),
         };
         let mut store = wasmtime::Store::new(&engine, state);
         let module = wasmtime::Module::new(&engine, data)

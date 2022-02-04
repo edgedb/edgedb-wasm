@@ -5,6 +5,8 @@ use std::sync::Arc;
 use tokio::fs;
 use anyhow::Context;
 
+use edgedb_tokio::raw::Pool;
+
 use crate::worker;
 
 #[derive(Debug, Clone)]
@@ -14,6 +16,12 @@ pub struct Tenant(Arc<TenantInner>);
 struct TenantInner {
     // TODO(tailhook) maybe set of workers?
     workers: HashMap<String, worker::Worker>,
+    common: Common,
+}
+
+#[derive(Clone, Debug)]
+pub struct Common {
+    pub client: Pool,
 }
 
 
@@ -39,6 +47,12 @@ impl Tenant {
         let mut workers = HashMap::new();
         let mut dir_iter = fs::read_dir(dir).await?;
         let mut tasks = Vec::new();
+        let mut builder = edgedb_tokio::Builder::uninitialized();
+        // TODO(tailhook) temporary
+        builder.host_port(Some("localhost"), Some(5656));
+        let tenant = Common {
+            client: Pool::new(builder),
+        };
         while let Some(item) = dir_iter.next_entry().await? {
             let path = item.path();
             if !matches!(path.extension(), Some(e) if e == "wasm") {
@@ -57,6 +71,7 @@ impl Tenant {
                 tenant_name.to_string(),
                 name.into(),
                 path.clone(),
+                tenant.clone(),
             );
             let task = tokio::spawn(worker);
             tasks.push((task, path));
@@ -75,7 +90,10 @@ impl Tenant {
             }
         }
         log::info!("Read {} wasm files", workers.len());
-        Ok(Tenant(Arc::new(TenantInner { workers })))
+        Ok(Tenant(Arc::new(TenantInner {
+            workers,
+            common: tenant,
+        })))
     }
 
     pub async fn handle(self, req: hyper::Request<hyper::Body>)

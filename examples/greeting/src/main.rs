@@ -1,17 +1,42 @@
 use edgedb_sdk::{log, web};
+use edgedb_sdk::client::{Client, Error, connect};
+use once_cell::sync::Lazy;
+
+static CLIENT: Lazy<Client> = Lazy::new(|| connect());
 
 #[edgedb_sdk::init_hook]
 fn init_hook() {
     log::warn!("Hello from Init hook!");
 }
 
+fn wrap_error(f: impl FnOnce() -> Result<web::Response, Error>)
+    -> web::Response
+{
+    match f() {
+        Ok(resp) => resp,
+        Err(e) => {
+            web::response()
+                .status(web::StatusCode::INTERNAL_SERVER_ERROR)
+                .header("Content-Type", "text/plain")
+                .body(format!("Internal Server Error").into())
+                .expect("response is built")
+        }
+    }
+}
+
 #[web::handler]
 fn handler(_req: web::Request) -> web::Response {
-    web::response()
-        .status(web::StatusCode::OK)
-        .header("Content-Type", "text/html")
-        .body(b"Hello from <b>wasm</b>!".to_vec())
-        .expect("response is built")
+    wrap_error(|| {
+        let counter = CLIENT.query::<i64, _>(
+            "SELECT (UPDATE Counter SET { value += 1}).value",
+            &(),
+        )?.remove(0);
+        Ok(web::response()
+            .status(web::StatusCode::OK)
+            .header("Content-Type", "text/html")
+            .body(format!("Visited {counter} times").into())
+            .expect("response is built"))
+    })
 }
 
 fn main() {
