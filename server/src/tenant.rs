@@ -50,8 +50,9 @@ impl Tenant {
         let mut builder = edgedb_tokio::Builder::uninitialized();
         // TODO(tailhook) temporary
         builder.host_port(Some("localhost"), Some(5656));
+        builder.insecure_dev_mode(true);
         let tenant = Common {
-            client: Pool::new(builder),
+            client: Pool::new(builder.build()?),
         };
         while let Some(item) = dir_iter.next_entry().await? {
             let path = item.path();
