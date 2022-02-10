@@ -31,32 +31,29 @@ flags capabilities {
     persistent-config,
 }
 
-record prepare-query {
-    // headers
+record compilation-flags {
     implicit-limit: option<u64>,
     implicit-typenames: bool,
     implicit-typeids: bool,
     allow-capabilities: capabilities,
     explicit-objectids: bool,
-
     io-format: io-format,
     expected-cardinality: cardinality,
-    command: string,
 }
 
 record prepare-complete {
-    query: query,
     capabilities: capabilities,
     cardinality: cardinality,
-    input-typespec-id: string,
-    output-typespec-id: string,
+    input-typedesc-id: string,
+    output-typedesc-id: string,
 }
 
 record data-description {
-    result-cardinality: bool,
-    input-typespec-id: string,
+    proto: tuple<u16, u16>,
+    result-cardinality: cardinality,
+    input-typedesc-id: string,
     input-typedesc: list<u8>,
-    output-typespec-id: string,
+    output-typedesc-id: string,
     output-typedesc: list<u8>,
 }
 record data {
@@ -70,7 +67,7 @@ resource query {
 
 resource client {
     static connect: function() -> client
-    prepare: function(query: prepare-query)
-        -> expected<prepare-complete, error>
+    prepare: function(compilation-flags: compilation-flags, query: string)
+        -> expected<tuple<query, prepare-complete>, error>
 }
 

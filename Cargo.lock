@@ -473,6 +473,7 @@ dependencies = [
 name = "edgedb-protocol"
 version = "0.2.0"
 dependencies = [
+ "bitflags",
  "bytes",
  "edgedb-errors",
  "snafu",
@@ -484,6 +485,7 @@ name = "edgedb-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "edgedb-errors",
  "edgedb-protocol",
  "edgedb-sdk-macros",
@@ -492,6 +494,7 @@ dependencies = [
  "minicbor",
  "once_cell",
  "thiserror",
+ "uuid",
  "wit-bindgen-rust",
 ]
 
@@ -539,7 +542,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bytes",
  "clap",
+ "edgedb-errors",
+ "edgedb-protocol",
  "edgedb-sdk",
  "edgedb-tokio",
  "env_logger 0.9.0",

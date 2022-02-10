@@ -15,6 +15,7 @@ fn wrap_error(f: impl FnOnce() -> Result<web::Response, Error>)
     match f() {
         Ok(resp) => resp,
         Err(e) => {
+            log::error!("Error handling request: {:#}", e);
             web::response()
                 .status(web::StatusCode::INTERNAL_SERVER_ERROR)
                 .header("Content-Type", "text/plain")
@@ -28,7 +29,7 @@ fn wrap_error(f: impl FnOnce() -> Result<web::Response, Error>)
 fn handler(_req: web::Request) -> web::Response {
     wrap_error(|| {
         let counter = CLIENT.query::<i64, _>(
-            "SELECT (UPDATE Counter SET { value += 1}).value",
+            "SELECT (UPDATE Counter SET { value := .value + 1}).value",
             &(),
         )?.remove(0);
         Ok(web::response()

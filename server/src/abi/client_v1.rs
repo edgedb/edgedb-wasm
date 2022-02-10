@@ -1,15 +1,23 @@
-use std::default::Default;
-
 wit_bindgen_wasmtime::export!({
     paths: ["./wit/edgedb-client-v1.wit"],
     async: *,
 });
 
-pub use edgedb_tokio::raw::Pool;
+pub use edgedb_tokio::raw::{Pool, Connection};
+use edgedb_errors::{ErrorKind, ClientError};
+use edgedb_protocol::common::{Cardinality};
+use edgedb_protocol::common::{CompilationFlags, Capabilities, IoFormat};
+use tokio::sync::Mutex;
 
 pub use edgedb_client_v1 as v1;
 pub use edgedb_client_v1::add_to_linker;
 pub use edgedb_client_v1::EdgedbClientV1Tables as Tables;
+
+use std::default::Default;
+
+use bytes::Bytes;
+
+use crate::bug::{Bug, Context as _};
 
 
 pub type Context<'a> = (&'a mut InnerState, &'a mut Tables<InnerState>);
@@ -26,6 +34,7 @@ pub struct Client {
 
 #[derive(Debug)]
 pub struct Query {
+    connection: Mutex<Connection>,
 }
 
 pub struct InnerState {
@@ -49,8 +58,18 @@ impl State {
 
 impl From<edgedb_tokio::Error> for v1::Error {
     fn from(err: edgedb_tokio::Error) -> v1::Error {
-        dbg!(err);
-        todo!();
+        use std::error::Error;
+        v1::Error {
+            code: err.code(),
+            messages: err.initial_message().iter().map(|&s| s)
+                .chain(err.contexts())
+                .map(|s| s.into())
+                .collect(),
+            error: err.source().map(|e| e.to_string()),
+            headers: err.headers().iter()
+                .map(|(&k, v)| (k, v.to_vec()))
+                .collect(),
+        }
     }
 }
 
@@ -64,21 +83,122 @@ impl v1::EdgedbClientV1 for InnerState {
         }
     }
     async fn client_prepare(&mut self, me: &Client,
-                            _query: v1::PrepareQuery<'_>)
-        -> Result<v1::PrepareComplete<Self>, v1::Error>
+                            flags: v1::CompilationFlags, query: &str)
+        -> Result<(Query, v1::PrepareComplete), v1::Error>
     {
-        let conn = me.pool.acquire().await?;
-        //self.pool.query(
-        todo!();
+        let mut connection = me.pool.acquire().await?;
+        let mut flags = CompilationFlags::try_from(flags)?;
+        flags.allow_capabilities &= Capabilities::MODIFICATIONS;
+        let prepare = connection.prepare(&flags, query).await?;
+        let prepare = v1::PrepareComplete {
+            capabilities: prepare.get_capabilities()
+                .wrap_bug("no capabilities received")?.try_into()?,
+            cardinality: prepare.cardinality.into(),
+            input_typedesc_id: prepare.input_typedesc_id.to_string(),
+            output_typedesc_id: prepare.input_typedesc_id.to_string(),
+        };
+        let query = Query { connection: Mutex::new(connection) };
+        Ok((query, prepare))
     }
-    async fn query_describe_data(&mut self, _me: &Query)
+    async fn query_describe_data(&mut self, query: &Query)
         -> Result<v1::DataDescription, v1::Error>
     {
-        todo!();
+        let mut conn = query.connection.lock().await;
+        let describe = conn.describe_data().await?;
+        Ok(v1::DataDescription {
+            proto: conn.proto().version_tuple(),
+            result_cardinality: describe.result_cardinality.into(),
+            input_typedesc_id: describe.input_typedesc_id.to_string(),
+            input_typedesc: describe.input_typedesc.to_vec(),
+            output_typedesc_id: describe.output_typedesc_id.to_string(),
+            output_typedesc: describe.output_typedesc.to_vec(),
+        })
     }
-    async fn query_execute(&mut self, _me: &Query, _arguments: &[u8])
+    async fn query_execute(&mut self, query: &Query, arguments: &[u8])
         -> Result<v1::Data, v1::Error>
     {
-        todo!();
+        let chunks = query.connection.lock().await
+            .execute(&Bytes::copy_from_slice(arguments)).await?;
+        Ok(v1::Data {
+            chunks: chunks.into_iter()
+                .flat_map(|data| data.data.into_iter())
+                .map(|d| d.to_vec())
+                .collect(),
+        })
+    }
+}
+
+impl TryFrom<v1::CompilationFlags> for CompilationFlags {
+    type Error = Bug;
+    fn try_from(src: v1::CompilationFlags) -> Result<CompilationFlags, Bug> {
+        Ok(CompilationFlags {
+            implicit_limit: src.implicit_limit,
+            implicit_typenames: src.implicit_typenames,
+            implicit_typeids: src.implicit_typeids,
+            allow_capabilities: src.allow_capabilities.try_into()?,
+            explicit_objectids: src.explicit_objectids,
+            io_format: src.io_format.into(),
+            expected_cardinality: src.expected_cardinality.into(),
+        })
+    }
+}
+
+impl TryFrom<Capabilities> for v1::Capabilities {
+    type Error = Bug;
+    fn try_from(src: Capabilities) -> Result<v1::Capabilities, Bug> {
+        let bits = src.bits().try_into()
+            .wrap_bug("converting capabilities from protocol to WebAssembly")?;
+        v1::Capabilities::from_bits(bits)
+            .wrap_bug("converting capabilities from protocol to WebAssembly")
+    }
+}
+
+impl TryFrom<v1::Capabilities> for Capabilities {
+    type Error = Bug;
+    fn try_from(src: v1::Capabilities) -> Result<Capabilities, Bug> {
+        let bits = src.bits().try_into()
+            .wrap_bug("converting capabilities from WebAssembly to protocol")?;
+        Capabilities::from_bits(bits)
+            .wrap_bug("converting capabilities from WebAssembly to protocol")
+    }
+}
+
+impl From<v1::IoFormat> for IoFormat {
+    fn from(src: v1::IoFormat) -> IoFormat {
+        match src {
+            v1::IoFormat::Binary => IoFormat::Binary,
+            v1::IoFormat::Json => IoFormat::Json,
+            v1::IoFormat::JsonElements => IoFormat::JsonElements,
+        }
+    }
+}
+
+impl From<v1::Cardinality> for Cardinality {
+    fn from(src: v1::Cardinality) -> Cardinality {
+        match src {
+            v1::Cardinality::NoResult => Cardinality::NoResult,
+            v1::Cardinality::AtMostOne => Cardinality::AtMostOne,
+            v1::Cardinality::One => Cardinality::One,
+            v1::Cardinality::Many => Cardinality::Many,
+            v1::Cardinality::AtLeastOne => Cardinality::AtLeastOne,
+        }
+    }
+}
+
+impl From<Cardinality> for v1::Cardinality {
+    fn from(src: Cardinality) -> v1::Cardinality {
+        match src {
+            Cardinality::NoResult => v1::Cardinality::NoResult,
+            Cardinality::AtMostOne => v1::Cardinality::AtMostOne,
+            Cardinality::One => v1::Cardinality::One,
+            Cardinality::Many => v1::Cardinality::Many,
+            Cardinality::AtLeastOne => v1::Cardinality::AtLeastOne,
+        }
+    }
+}
+
+impl From<crate::bug::Bug> for v1::Error {
+    fn from(bug: crate::bug::Bug) -> v1::Error {
+        ClientError::with_message(bug.to_string()).into()
     }
 }

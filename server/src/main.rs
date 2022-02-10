@@ -1,4 +1,5 @@
 mod abi;
+mod bug;
 mod options;
 mod tenant;
 mod worker;
