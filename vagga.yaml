@@ -6,6 +6,12 @@ commands:
     prerequisites: [make-wasm]
     run: [cargo, run, "--", --wasm-dir=./target/wasm32-wasi/release]
 
+  run-release: !Command
+    description: Run release build of a development server
+    container: ubuntu
+    prerequisites: [make-wasm]
+    run: [cargo, run, --release, "--", --wasm-dir=./target/wasm32-wasi/release]
+
   make: !Command
     description: Build the library and CLI
     container: ubuntu
@@ -51,6 +57,11 @@ commands:
     description: Run tests
     container: ubuntu
     run: [cargo, test]
+
+  wrk: !Command
+    description: Run wrk HTTP benchmarking tool
+    container: wrk
+    run: [wrk]
 
 containers:
 
@@ -99,3 +110,9 @@ containers:
     environ:
       HOME: /work/target
       RUST_BACKTRACE: 1
+
+  wrk:
+    setup:
+    - !Alpine v3.14
+    - !Repo community
+    - !Install [wrk]
