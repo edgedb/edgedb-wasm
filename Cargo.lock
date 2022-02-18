@@ -465,6 +465,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "edgedb-errors"
 version = "0.1.0"
+source = "git+https://github.com/edgedb/edgedb-rust?branch=tokio#73fd6518426f049d7286589cde7b69b8ae24bd14"
 dependencies = [
  "bytes",
 ]
@@ -472,7 +473,7 @@ dependencies = [
 [[package]]
 name = "edgedb-errors"
 version = "0.1.0"
-source = "git+https://github.com/edgedb/edgedb-rust?branch=tokio#72e45656156d08ead56d83127aeb35cc756f7e30"
+source = "git+https://github.com/edgedb/edgedb-rust/#b2626c7930e4ee39887e9341ab2379daefd6e8ec"
 dependencies = [
  "bytes",
 ]
@@ -480,10 +481,11 @@ dependencies = [
 [[package]]
 name = "edgedb-protocol"
 version = "0.2.0"
+source = "git+https://github.com/edgedb/edgedb-rust?branch=tokio#73fd6518426f049d7286589cde7b69b8ae24bd14"
 dependencies = [
  "bitflags",
  "bytes",
- "edgedb-errors 0.1.0",
+ "edgedb-errors 0.1.0 (git+https://github.com/edgedb/edgedb-rust?branch=tokio)",
  "snafu",
  "uuid",
 ]
@@ -491,11 +493,10 @@ dependencies = [
 [[package]]
 name = "edgedb-protocol"
 version = "0.2.0"
-source = "git+https://github.com/edgedb/edgedb-rust?branch=tokio#72e45656156d08ead56d83127aeb35cc756f7e30"
+source = "git+https://github.com/edgedb/edgedb-rust/#b2626c7930e4ee39887e9341ab2379daefd6e8ec"
 dependencies = [
- "bitflags",
  "bytes",
- "edgedb-errors 0.1.0 (git+https://github.com/edgedb/edgedb-rust?branch=tokio)",
+ "edgedb-errors 0.1.0 (git+https://github.com/edgedb/edgedb-rust/)",
  "snafu",
  "uuid",
 ]
@@ -506,8 +507,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "edgedb-errors 0.1.0",
- "edgedb-protocol 0.2.0",
+ "edgedb-errors 0.1.0 (git+https://github.com/edgedb/edgedb-rust/)",
+ "edgedb-protocol 0.2.0 (git+https://github.com/edgedb/edgedb-rust/)",
  "edgedb-sdk-macros",
  "http",
  "log",
@@ -531,7 +532,7 @@ dependencies = [
 [[package]]
 name = "edgedb-tokio"
 version = "0.1.0"
-source = "git+https://github.com/edgedb/edgedb-rust?branch=tokio#72e45656156d08ead56d83127aeb35cc756f7e30"
+source = "git+https://github.com/edgedb/edgedb-rust?branch=tokio#73fd6518426f049d7286589cde7b69b8ae24bd14"
 dependencies = [
  "anyhow",
  "async-trait",
