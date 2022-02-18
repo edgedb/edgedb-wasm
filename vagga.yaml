@@ -56,7 +56,13 @@ commands:
   test: !Command
     description: Run tests
     container: ubuntu
-    run: [cargo, test]
+    run: [cargo, test, -pserver]
+
+  outdated: !Command
+    description: Run cargo outdated
+    symlink-name: cargo
+    container: tools
+    run: [cargo, outdated]
 
   wrk: !Command
     description: Run wrk HTTP benchmarking tool

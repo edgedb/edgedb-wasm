@@ -16,7 +16,6 @@ pub struct Tenant(Arc<TenantInner>);
 struct TenantInner {
     // TODO(tailhook) maybe set of workers?
     workers: HashMap<String, worker::Worker>,
-    common: Common,
 }
 
 #[derive(Clone, Debug)]
@@ -52,7 +51,7 @@ impl Tenant {
         builder.host_port(Some("localhost"), Some(5656));
         builder.insecure_dev_mode(true);
         let tenant = Common {
-            client: Pool::new(builder.build()?),
+            client: Pool::new(&builder.build()?),
         };
         while let Some(item) = dir_iter.next_entry().await? {
             let path = item.path();
@@ -93,7 +92,6 @@ impl Tenant {
         log::info!("Read {} wasm files", workers.len());
         Ok(Tenant(Arc::new(TenantInner {
             workers,
-            common: tenant,
         })))
     }
 

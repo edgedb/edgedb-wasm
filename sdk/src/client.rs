@@ -51,7 +51,7 @@ impl Client {
             io_format: v1::IoFormat::Binary,
             expected_cardinality: v1::Cardinality::Many,
         };
-        let (query, prepare_info) = self.client.prepare(flags, query)
+        let (query, _prepare_info) = self.client.prepare(flags, query)
             .map_err(|e| e.into())?;
         let desc = query.describe_data().map_err(|e| e.into())?;
         let desc = CommandDataDescription::try_from(desc)?;
