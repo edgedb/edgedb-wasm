@@ -6,3 +6,6 @@ members = [
     "examples/greeting",
 ]
 exclude = ["wit-bindgen", "edgedb-rust"]
+
+[profile.release]
+debug = true

@@ -1,8 +1,9 @@
-CREATE MIGRATION m13rb76beanbolinjy5mrws4ck5quuxwaxpo2cqdc356ovjcncygkq
+CREATE MIGRATION m13iunwvmjlnvhfk7cyywgtfjioihv4o434sf3m5h6sx6yfngho44a
     ONTO initial
 {
+  CREATE EXTENSION webassembly VERSION '0.1';
   CREATE TYPE default::Counter {
       CREATE PROPERTY value -> std::int64;
   };
-  INSERT Counter { value := 0 };
+  INSERT default::Counter { value := 1 };
 };

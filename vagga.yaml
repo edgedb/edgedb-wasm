@@ -6,6 +6,17 @@ commands:
     prerequisites: [make-wasm]
     run: [cargo, run, "--", --wasm-dir=./target/wasm32-wasi/release]
 
+  run-unix: !Command
+    description: Run development server on unix socket
+    container: ubuntu
+    prerequisites: [make-wasm]
+    environ:
+      WASMTIME_BACKTRACE_DETAILS: 1
+    run: [cargo, run, "--",
+      --wasm-dir=./target/wasm32-wasi/release,
+      --unix-socket=./tmp/run/.s.wasm_ext,
+    ]
+
   run-release: !Command
     description: Run release build of a development server
     container: ubuntu
@@ -69,6 +80,11 @@ commands:
     container: wrk
     run: [wrk]
 
+  edgedb: !Command
+    description: Run edgedb CLI
+    container: ubuntu
+    run: [edgedb]
+
 containers:
 
   ubuntu:
@@ -89,6 +105,10 @@ containers:
     - !TarInstall
       url: "https://static.rust-lang.org/dist/rustfmt-1.57.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr"
+    - !Download
+      url: https://packages.edgedb.com/dist/linux-x86_64/edgedb-cli_latest
+      path: /usr/bin/edgedb
+      mode: 0o755
     environ: &environ
       HOME: /work/target
       LANG: en_US.UTF-8

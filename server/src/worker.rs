@@ -10,6 +10,8 @@ use wasmtime::Instance;
 
 use crate::abi;
 use crate::tenant::Common;
+use crate::tenant::http::{self, ConvertInput as _};
+
 
 #[derive(Clone)]
 pub struct Worker(Arc<WorkerInner>);
@@ -146,48 +148,33 @@ impl Worker {
             http_server_v1: Some(http_server_v1),
         })))
     }
-    pub async fn handle_http(&self, mut req: hyper::Request<hyper::Body>)
-        -> hyper::Result<hyper::Response<hyper::Body>>
+    pub async fn handle_http<P: http::Process>(&self, req: P::ConvertInput)
+        -> anyhow::Result<P::Output>
     {
         if let Some(api) = &self.0.http_server_v1 {
-            let api_req =
-                abi::http_server_v1::ConvertRequest::read_full(&mut req).await?;
             let response;
             // TODO(tailhook) on poison restart worker
             let mut store = self.0.store.lock().await;
-            match api.handle_request(&mut *store, api_req.as_request()).await {
+            match api.handle_request(&mut *store, req.as_v1()).await {
                 Ok(resp) => response = resp,
                 Err(e) => {
                     log::error!("Worker {} failed to handle request: {:#}. \
                                  Request: {:?}",
                                 self.full_name(), e, req);
-                    return Ok(hyper::Response::builder()
-                        .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
-                        // TODO(tailhook) only in debug mode
-                        .body("Wasm failed to handle request".into())
-                        .expect("can compose static response"))
+                    return Ok(P::err_internal_server_error())
                 }
             };
-            match response.try_into() {
+            match http::FromWasm::from_wasm(response) {
                 Ok(resp) => Ok(resp),
                 Err(e) => {
                     log::error!("Worker {} returned invalid response: {:#}. \
                                  Request: {:?}",
                                 self.full_name(), e, req);
-                    Ok(hyper::Response::builder()
-                        .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
-                        // TODO(tailhook) only in debug mode
-                        .body("Wasm returned invalid response".into())
-                        .expect("can compose static response"))
+                    Ok(P::err_internal_server_error())
                 }
             }
         } else {
-            Ok(hyper::Response::builder()
-                .status(hyper::StatusCode::NOT_FOUND)
-                // TODO(tailhook) only in debug mode
-                .body(format!("Worker {} does not support HTTP",
-                              self.full_name()).into())
-                .expect("can compose static response"))
+            Ok(P::err_not_found())
         }
     }
 }

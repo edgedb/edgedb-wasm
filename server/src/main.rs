@@ -1,7 +1,9 @@
 mod abi;
 mod bug;
+mod hyper;
 mod options;
 mod tenant;
+mod unix_sock;
 mod worker;
 
 use std::convert::Infallible;
@@ -9,9 +11,8 @@ use std::net::SocketAddr;
 
 use anyhow::Context;
 use clap::Parser;
-use hyper::server::conn::Http;
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Server};
+use ::hyper::service::{make_service_fn, service_fn};
+use ::hyper::{Server};
 use tokio::fs;
 use tokio::net::UnixListener;
 
@@ -38,15 +39,6 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Reading wasm files from {:?}", options.wasm_dir);
     let tenant = Tenant::read_dir("default", &options.wasm_dir).await?;
 
-    let make_svc = make_service_fn(|_conn| {
-        let tenant = tenant.clone();
-        async move {
-            Ok::<_, Infallible>(service_fn(move |req| {
-                tenant.clone().handle(req)
-            }))
-        }
-    });
-
     if let Some(sock) = options.unix_socket {
         if fs::metadata(&sock).await.is_ok() {
             fs::remove_file(&sock).await
@@ -57,12 +49,7 @@ async fn main() -> anyhow::Result<()> {
         loop {
             match listener.accept().await {
                 Ok((sock, _addr)) => {
-                    let tenant = tenant.clone();
-                    let connection = Http::new()
-                        .serve_connection(sock, service_fn(move |req| {
-                            tenant.clone().handle(req)
-                        }));
-                    tokio::spawn(connection);
+                    tokio::spawn(unix_sock::service(sock, &tenant));
                 }
                 Err(e) => {
                     log::error!("Error accepting unix socket: {}", e);
@@ -70,6 +57,20 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     } else {
+
+        let make_svc = make_service_fn(|_conn| {
+            let tenant = tenant.clone();
+            async move {
+                Ok::<_, Infallible>(service_fn(move |req| {
+                    let tenant = tenant.clone();
+                    async {
+                        let mut req = req;
+                        tenant.handle::<hyper::Process>(&mut req).await
+                    }
+                }))
+            }
+        });
+
         let addr = SocketAddr::from(([127, 0, 0, 1], options.port));
         Server::bind(&addr).serve(make_svc).await
             .context("error serving HTTP")?;

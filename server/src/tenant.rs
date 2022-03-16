@@ -1,3 +1,5 @@
+pub mod http;
+
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -8,6 +10,7 @@ use anyhow::Context;
 use edgedb_tokio::raw::Pool;
 
 use crate::worker;
+use crate::tenant::http::ConvertInput as _;
 
 #[derive(Debug, Clone)]
 pub struct Tenant(Arc<TenantInner>);
@@ -95,27 +98,20 @@ impl Tenant {
         })))
     }
 
-    pub async fn handle(self, req: hyper::Request<hyper::Body>)
-        -> hyper::Result<hyper::Response<hyper::Body>>
+    pub async fn handle<P>(self, req: P::Input) -> anyhow::Result<P::Output>
+        where P: http::Process,
     {
-        if let Some(suffix) = req.uri().path().strip_prefix("/db/default/") {
+        let cvt = P::read_full(req).await?;
+        if let Some(suffix) = cvt.uri().path().strip_prefix("/db/edgedb/wasm/") {
             let name_end = suffix.find('/').unwrap_or(suffix.len());
             let wasm_name = &suffix[..name_end];
             if let Some(worker) = self.0.workers.get(wasm_name) {
-                worker.handle_http(req).await
+                worker.handle_http::<P>(cvt).await
             } else {
-                // TODO(tailhook) only in debug mode
-                Ok(hyper::Response::builder()
-                    .status(hyper::StatusCode::NOT_FOUND)
-                    .body(format!("No wasm named {wasm_name} found").into())
-                    .expect("can compose static response"))
+                Ok(P::err_not_found())
             }
         } else {
-            // TODO(tailhook) only in debug mode
-            Ok(hyper::Response::builder()
-                .status(hyper::StatusCode::NOT_FOUND)
-                .body(b"Try /db/default/<wasm-file-name>/"[..].into())
-                .expect("can compose static response"))
+            Ok(P::err_not_found())
         }
     }
 }

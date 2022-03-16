@@ -14,7 +14,7 @@ edgedb-sdk = { path="../sdk", features=["host"], default-features=false }
 edgedb-tokio = { git="https://github.com/edgedb/edgedb-rust", branch="tokio", features=["unstable"], default-features=false }
 edgedb-protocol = { git="https://github.com/edgedb/edgedb-rust", branch="tokio", default-features=false }
 edgedb-errors = { git="https://github.com/edgedb/edgedb-rust", branch="tokio", default-features=false }
-bytes = "1.1.0"
+bytes = { version="1.1.0", features=["serde"] }
 clap = { version="3.0.7", features=["derive"] }
 log = "0.4.14"
 env_logger = "0.9.0"
@@ -26,3 +26,6 @@ anyhow = "1.0.52"
 tokio = { version="1.15", features=["fs", "rt-multi-thread", "macros"] }
 wit-bindgen-wasmtime = { git="https://github.com/bytecodealliance/wit-bindgen/", features=["async"] }
 hyper = { version="0.14.16", features=["server", "tcp", "http1", "http2"] }
+
+serde = "1.0.136"
+serde-pickle = "1.1.0"
