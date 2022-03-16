@@ -40,8 +40,8 @@ impl v1::EdgedbLogV1 for worker::State {
     fn log(&mut self, value: v1::LogRecord) {
         let target = format!(
             "wasm::{}::{}::{}",
-            self.name.tenant,
-            self.name.worker,
+            self.name.database,
+            self.name.wasm_name,
             value.target,
         );
         let meta = log::MetadataBuilder::new()

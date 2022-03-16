@@ -1,26 +1,24 @@
 use std::default::Default;
 use std::fmt;
-use std::path::PathBuf;
 use std::sync::Arc;
+use std::hash;
 
 use anyhow::Context;
-use tokio::fs;
 use tokio::sync::Mutex;
 use wasmtime::Instance;
 
 use crate::abi;
-use crate::tenant::Common;
+use crate::tenant::Tenant;
 use crate::tenant::http::{self, ConvertInput as _};
 
 
 #[derive(Clone)]
 pub struct Worker(Arc<WorkerInner>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Name {
-    pub tenant: String,
-    pub worker: String,
-    pub path: PathBuf,
+    pub database: String,
+    pub wasm_name: String,
 }
 
 pub struct State {
@@ -39,8 +37,14 @@ struct WorkerInner {
 }
 
 impl State {
-    fn client_v1(&mut self) -> abi::client_v1::Context {
+    pub fn wasi(&mut self) -> &mut wasmtime_wasi::WasiCtx {
+        &mut self.wasi
+    }
+    pub fn client_v1(&mut self) -> abi::client_v1::Context {
         self.client_v1.context()
+    }
+    pub fn http_server_v1(&mut self) -> &mut abi::http_server_v1::State {
+        &mut self.http_server_v1
     }
 }
 
@@ -87,51 +91,37 @@ async fn call_init(store: &mut wasmtime::Store<State>, instance: &Instance)
 }
 
 impl Worker {
+    /*
     pub fn name(&self) -> &str {
         &self.0.name.worker
     }
+    */
     pub fn full_name(&self) -> &Name {
         &*self.0.name
     }
-    pub async fn new(tenant: String, name: String, path: PathBuf,
-                     common: Common)
+    pub async fn new(tenant: &Tenant, database: &str, wasm_name: &str)
         -> anyhow::Result<Worker>
     {
-        let data = fs::read(&path).await
-            .with_context(|| format!("cannot read {path:?}"))?;
         let name = Arc::new(Name {
-            tenant,
-            worker: name,
-            path,
+            database: database.into(),
+            wasm_name: wasm_name.into(),
         });
-        let engine = wasmtime::Engine::new(
-            wasmtime::Config::new()
-            .async_support(true)
-        ).context("cannot create engine")?;
         let wasi = wasmtime_wasi::sync::WasiCtxBuilder::new()
             .inherit_stdio() // temporary
             .build();
+        let cli = tenant.get_client(database).await?;
         let state = State {
             name: name.clone(),
             wasi,
             http_server_v1: Default::default(),
-            client_v1: abi::client_v1::State::new(&common.client),
+            client_v1: abi::client_v1::State::new(&cli),
         };
-        let mut store = wasmtime::Store::new(&engine, state);
-        let module = wasmtime::Module::new(&engine, data)
-            .context("cannot initialize module")?;
-        let mut linker = wasmtime::Linker::new(&engine);
-        wasmtime_wasi::add_to_linker(&mut linker, |s: &mut State| &mut s.wasi)
-            .context("error linking WASI")?;
-        abi::log_v1::add_to_linker(&mut linker, |s| s)
-            .context("error linking edgedb_log_v1")?;
-        abi::client_v1::add_to_linker(&mut linker, State::client_v1)
-            .context("error linking edgedb_client_v1")?;
-        abi::http_server_v1::Handler::add_to_linker(
-            &mut linker, |s: &mut State| &mut s.http_server_v1)
-            .context("error linking edgedb_http_server_v1")?;
+        let module = tenant.get_module(wasm_name)
+            // TODO(tailhook) better error
+            .context("cannot find module")?;
+        let mut store = wasmtime::Store::new(tenant.get_engine(), state);
 
-        let instance = linker.instantiate(&mut store, &module)?;
+        let instance = tenant.get_linker().instantiate(&mut store, &module)?;
         let http_server_v1 = abi::http_server_v1::Handler::new(
             &mut store, &instance, |s: &mut State| &mut s.http_server_v1)
             .context("error reading edgedb_http_server_v1 handler")?;
@@ -183,9 +173,8 @@ impl fmt::Debug for Worker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name = &self.0.name;
         f.debug_struct("Worker")
-            .field("tenant", &name.tenant)
-            .field("worker", &name.worker)
-            .field("path", &name.path.display())
+            .field("database", &name.database)
+            .field("wasm_name", &name.wasm_name)
             // TODO(tailhook) add some running info
             .finish()
     }
@@ -201,6 +190,29 @@ impl fmt::Debug for State {
 
 impl fmt::Display for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", self.tenant, self.worker)
+        write!(f, "/db/{}/wasm/{}", self.database, self.wasm_name)
     }
 }
+
+impl std::borrow::Borrow<Name> for Worker {
+    fn borrow(&self) -> &Name {
+        &*self.0.name
+    }
+}
+
+impl hash::Hash for Worker {
+    fn hash<H>(&self, state: &mut H)
+        where H: hash::Hasher
+    {
+        self.0.name.hash(state)
+    }
+}
+
+impl PartialEq for Worker {
+    fn eq(&self, other: &Worker) -> bool {
+        self.0.name == other.0.name
+    }
+}
+
+impl Eq for Worker {}
+
