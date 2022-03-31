@@ -2,7 +2,7 @@
 
 pub use log::*;
 
-wit_bindgen_rust::import!("./wit/edgedb_log_v1.wit");
+wit_bindgen_rust::import!("../wit/edgedb_log_v1.wit");
 
 use edgedb_log_v1 as v1;
 

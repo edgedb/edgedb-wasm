@@ -1,5 +1,5 @@
 wit_bindgen_wasmtime::import!({
-    paths: ["./wit/edgedb_http_server_v1.wit"],
+    paths: ["../wit/edgedb_http_server_v1.wit"],
     async: *,
 });
 

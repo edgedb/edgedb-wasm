@@ -67,7 +67,7 @@ commands:
   test: !Command
     description: Run tests
     container: ubuntu
-    run: [cargo, test, -pserver]
+    run: [cargo, test]
 
   outdated: !Command
     description: Run cargo outdated

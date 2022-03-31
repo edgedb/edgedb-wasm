@@ -1,5 +1,5 @@
 wit_bindgen_wasmtime::export!({
-    paths: ["./wit/edgedb-client-v1.wit"],
+    paths: ["../wit/edgedb-client-v1.wit"],
     async: *,
 });
 

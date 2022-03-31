@@ -1,6 +1,6 @@
 use crate::worker;
 
-wit_bindgen_wasmtime::export!("./wit/edgedb_log_v1.wit");
+wit_bindgen_wasmtime::export!("../wit/edgedb_log_v1.wit");
 
 use edgedb_log_v1 as v1;
 

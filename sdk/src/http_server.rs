@@ -1,6 +1,6 @@
 use crate::web::{self, WEB_HANDLER};
 
-wit_bindgen_rust::export!("./wit/edgedb_http_server_v1.wit");
+wit_bindgen_rust::export!("../wit/edgedb_http_server_v1.wit");
 
 use edgedb_http_server_v1 as v1;
 

@@ -10,7 +10,7 @@ pub use edgedb_errors::{ClientError, ProtocolEncodingError, NoResultExpected};
 
 use bytes::BytesMut;
 
-wit_bindgen_rust::import!("./wit/edgedb-client-v1.wit");
+wit_bindgen_rust::import!("../wit/edgedb-client-v1.wit");
 
 use edgedb_client_v1 as v1;
 
