@@ -39,6 +39,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
 
 [[package]]
+name = "async-once-cell"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e52116ee51c72c07a9db74c6f95213c95c462408bb5a689772d623a62b96471"
+
+[[package]]
 name = "async-trait"
 version = "0.1.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -573,6 +579,7 @@ name = "edgedb-wasm-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-once-cell",
  "async-trait",
  "bytes",
  "clap",

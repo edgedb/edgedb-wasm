@@ -5,6 +5,7 @@ mod options;
 mod tenant;
 mod unix_sock;
 mod worker;
+mod module;
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -37,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     log::debug!("Options {:#?}", options);
 
     log::info!("Reading wasm files from {:?}", options.wasm_dir);
-    let tenant = Tenant::read_dir("default", &options.wasm_dir).await?;
+    let tenant = Tenant::new("default").await?;
 
     if let Some(sock) = options.unix_socket {
         if fs::metadata(&sock).await.is_ok() {
@@ -57,7 +58,13 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     } else {
-
+        if let Some(dir) = &options.wasm_dir {
+            tenant.set_directory("edgedb", dir).await;
+        } else {
+            anyhow::bail!("--wasm-dir is required in HTTP (test) mode");
+        }
+        log::warn!("Running in test mode, \
+                    only `edgedb` database is supported");
         let make_svc = make_service_fn(|_conn| {
             let tenant = tenant.clone();
             async move {

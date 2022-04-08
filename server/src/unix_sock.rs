@@ -1,9 +1,11 @@
+use std::path::PathBuf;
 use std::collections::HashMap;
 use std::future::Future;
 use std::marker::PhantomData;
 
 use bytes::Bytes;
 use hyper::Uri;
+use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 
@@ -15,7 +17,20 @@ use crate::abi::http_server_v1 as v1;
 pub struct Process<'a>(PhantomData<&'a ()>);
 
 #[derive(serde::Deserialize, Debug)]
-pub struct Request {
+#[serde(tag="request", content="params")]
+pub enum Request {
+    SetDirectory(SetDirectory),
+    Http(HttpRequest),
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct SetDirectory {
+    database: String,
+    directory: PathBuf,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct HttpRequest {
     method: String,
     url: String,
     headers: Vec<(Bytes, Bytes)>,
@@ -25,7 +40,7 @@ pub struct Request {
 #[derive(Debug)]
 pub struct ConvertRequest<'a> {
     uri: Uri,
-    request: &'a Request,
+    request: &'a HttpRequest,
     headers: Vec<(&'a [u8], &'a [u8])>,
 }
 
@@ -39,11 +54,11 @@ pub struct Response {
 
 #[async_trait::async_trait]
 impl<'a> http::Process for Process<'a> {
-    type Input = &'a Request;
+    type Input = &'a HttpRequest;
     type ConvertInput = ConvertRequest<'a>;
     type Output = Response;
 
-    async fn read_full(request: &'a Request)
+    async fn read_full(request: &'a HttpRequest)
         -> anyhow::Result<ConvertRequest<'a>>
     {
         Ok(ConvertRequest {
@@ -73,6 +88,15 @@ impl<'a> http::Process for Process<'a> {
     }
 }
 
+async fn respond(mut sock: UnixStream, response: impl Serialize)
+    -> anyhow::Result<()>
+{
+    sock.write_all(
+        &serde_pickle::to_vec(&response, serde_pickle::SerOptions::new())?
+    ).await?;
+    Ok(())
+}
+
 async fn process_request(mut sock: UnixStream, tenant: Tenant)
     -> anyhow::Result<()>
 {
@@ -80,10 +104,16 @@ async fn process_request(mut sock: UnixStream, tenant: Tenant)
     sock.read_to_end(&mut request_data).await?;
     let request = serde_pickle::from_slice(&request_data,
            serde_pickle::DeOptions::new().replace_unresolved_globals())?;
-    let response = tenant.handle::<Process>(&request).await?;
-    sock.write_all(
-        &serde_pickle::to_vec(&response, serde_pickle::SerOptions::new())?
-    ).await?;
+    match request {
+        Request::Http(request) => {
+            let res = tenant.handle::<Process>(&request).await?;
+            respond(sock, res).await?;
+        }
+        Request::SetDirectory(SetDirectory { database, directory }) => {
+            tenant.set_directory(&database, &directory).await;
+            respond(sock, ()).await?;
+        }
+    }
     Ok(())
 }
 

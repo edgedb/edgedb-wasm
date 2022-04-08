@@ -2,29 +2,31 @@ pub mod http;
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::path::Path;
-use std::sync::Arc;
+use std::mem;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Weak};
 
-use tokio::fs;
-use tokio::sync::RwLock;
 use anyhow::Context;
-
+use async_once_cell::OnceCell as Cell;
 use edgedb_tokio::raw::Pool;
+use tokio::fs;
+use tokio::sync::{RwLock, Mutex};
 
 use crate::abi;
 use crate::worker;
 use crate::tenant::http::ConvertInput as _;
+use crate::module::Module;
 
 type Database = String;
-type WasmName = String;
 
 #[derive(Clone)]
 pub struct Tenant(Arc<TenantInner>);
 
-struct TenantInner {
+pub struct TenantInner {
     workers: RwLock<HashSet<worker::Worker>>,
     clients: RwLock<HashMap<Database, Pool>>,
-    modules: HashMap<WasmName, wasmtime::Module>,
+    directories: RwLock<HashMap<String, PathBuf>>,
+    modules: Mutex<HashMap<Arc<PathBuf>, Arc<Cell<Weak<Module>>>>>,
     engine: wasmtime::Engine,
     linker: wasmtime::Linker<worker::State>,
 }
@@ -40,13 +42,8 @@ fn is_valid_name(name: &str) -> bool {
 }
 
 impl Tenant {
-    pub async fn read_dir(_name: &str, dir: impl AsRef<Path>)
+    pub async fn new(_name: &str)
         -> anyhow::Result<Tenant>
-    {
-        Tenant::_read_dir(dir.as_ref()).await
-            .context("failed to read WebAssembly directory")
-    }
-    async fn _read_dir(dir: &Path) -> anyhow::Result<Tenant>
     {
         let engine = wasmtime::Engine::new(
             wasmtime::Config::new()
@@ -63,32 +60,11 @@ impl Tenant {
             &mut linker, worker::State::http_server_v1)
             .context("error linking edgedb_http_server_v1")?;
 
-        let mut dir_iter = fs::read_dir(dir).await?;
-        let mut modules = HashMap::new();
-        while let Some(item) = dir_iter.next_entry().await? {
-            let path = item.path();
-            if !matches!(path.extension(), Some(e) if e == "wasm") {
-                continue;
-            }
-            let stem = path.file_stem().and_then(|x| x.to_str());
-            let name = if let Some(name) = stem {
-                if !is_valid_name(name) {
-                    continue;
-                }
-                name
-            } else {
-                continue;
-            };
-            let data = fs::read(&path).await
-                .with_context(|| format!("cannot read {path:?}"))?;
-            let module = wasmtime::Module::new(&engine, data)
-                .context("cannot initialize module")?;
-            modules.insert(name.into(), module);
-        }
         Ok(Tenant(Arc::new(TenantInner {
             workers: RwLock::new(HashSet::new()),
             clients: RwLock::new(HashMap::new()),
-            modules,
+            modules: Mutex::new(HashMap::new()),
+            directories: RwLock::new(HashMap::new()),
             engine,
             linker,
         })))
@@ -131,6 +107,21 @@ impl Tenant {
         &self.0.linker
     }
 
+    pub async fn set_directory(&self, database: &str, directory: &Path) {
+        self.0.directories.write().await
+            .insert(database.into(), directory.into());
+        // TODO(tailhook) fix to drain_filter
+        let mut wrks = self.0.workers.write().await;
+        let old_wrks = mem::replace(&mut *wrks, HashSet::new());
+        for wrk in old_wrks {
+            if wrk.full_name().database != database ||
+                wrk.module().path.parent() == Some(directory)
+            {
+                wrks.insert(wrk);
+            }
+        }
+    }
+
     pub async fn get_client(&self, database: &str) -> anyhow::Result<Pool> {
         let clis = &self.0.clients;
         if let Some(pool) = clis.read().await.get(database) {
@@ -147,8 +138,57 @@ impl Tenant {
             .or_insert_with(|| pool)
             .clone())
     }
-    pub fn get_module(&self, module: &str) -> Option<&wasmtime::Module> {
-        self.0.modules.get(module)
+    pub async fn get_module(&self, database: &str, wasm_name: &str)
+        -> anyhow::Result<Arc<Module>>
+    {
+        let path = self.0.directories.read().await.get(database)
+            .with_context(|| format!("no wasm directory is configured \
+                                      for the database {:?}", database))?
+            .join(format!("{}.wasm", wasm_name));
+        self._get_module(path).await
+    }
+
+    async fn _get_module(&self, path: impl Into<Arc<PathBuf>>)
+        -> anyhow::Result<Arc<Module>>
+    {
+        let path = path.into();
+        loop {
+            let mut result = None;
+            let cell = self.0.modules.lock().await
+                .entry(path.clone())
+                .or_insert_with(|| Arc::new(Cell::new()))
+                .clone();
+
+            let path = path.clone();
+            let weak = cell.get_or_try_init(async {
+                let data = fs::read(path.as_path()).await
+                    .with_context(|| format!("cannot read {path:?}"))?;
+                let wasm = wasmtime::Module::new(&self.0.engine, data)
+                    .context("cannot initialize module")?;
+                log::info!("Module {path:?} loaded");
+                let module = Arc::new(Module {
+                    path,
+                    tenant: self.0.clone(),
+                    wasm,
+                });
+                result = Some(module.clone());
+                anyhow::Ok(Arc::downgrade(&module))
+            }).await?;
+
+            // TODO(tailhook) check timestamp
+
+            // New module just inserted. We use `result` to hold strong
+            // reference
+            if let Some(module) = result {
+                return Ok(module);
+            }
+            if let Some(module) = weak.upgrade() {
+                return Ok(module);
+            }
+            // Weak reference was just dropped, should be very rare race
+            // condition, so retry is okay
+            continue;
+        }
     }
     pub async fn get_worker(&self, database: &str, wasm_name: &str)
         -> anyhow::Result<worker::Worker>

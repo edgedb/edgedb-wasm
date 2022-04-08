@@ -1,13 +1,14 @@
 use std::default::Default;
 use std::fmt;
-use std::sync::Arc;
 use std::hash;
+use std::sync::Arc;
 
 use anyhow::Context;
 use tokio::sync::Mutex;
 use wasmtime::Instance;
 
 use crate::abi;
+use crate::module::Module;
 use crate::tenant::Tenant;
 use crate::tenant::http::{self, ConvertInput as _};
 
@@ -30,6 +31,7 @@ pub struct State {
 
 struct WorkerInner {
     name: Arc<Name>,
+    module: Arc<Module>,
     store: Mutex<wasmtime::Store<State>>,
     #[allow(dead_code)] // TODO
     instance: Instance,
@@ -99,6 +101,9 @@ impl Worker {
     pub fn full_name(&self) -> &Name {
         &*self.0.name
     }
+    pub fn module(&self) -> &Arc<Module> {
+        &self.0.module
+    }
     pub async fn new(tenant: &Tenant, database: &str, wasm_name: &str)
         -> anyhow::Result<Worker>
     {
@@ -116,12 +121,13 @@ impl Worker {
             http_server_v1: Default::default(),
             client_v1: abi::client_v1::State::new(&cli),
         };
-        let module = tenant.get_module(wasm_name)
+        let module = tenant.get_module(database, wasm_name).await
             // TODO(tailhook) better error
             .context("cannot find module")?;
         let mut store = wasmtime::Store::new(tenant.get_engine(), state);
 
-        let instance = tenant.get_linker().instantiate(&mut store, &module)?;
+        let instance = tenant.get_linker()
+            .instantiate(&mut store, &module.wasm)?;
         let http_server_v1 = abi::http_server_v1::Handler::new(
             &mut store, &instance, |s: &mut State| &mut s.http_server_v1)
             .context("error reading edgedb_http_server_v1 handler")?;
@@ -133,6 +139,7 @@ impl Worker {
 
         Ok(Worker(Arc::new(WorkerInner {
             name,
+            module: module.clone(),
             store: Mutex::new(store),
             instance,
             http_server_v1: Some(http_server_v1),
