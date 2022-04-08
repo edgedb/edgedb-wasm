@@ -17,7 +17,7 @@ use crate::abi::http_server_v1 as v1;
 pub struct Process<'a>(PhantomData<&'a ()>);
 
 #[derive(serde::Deserialize, Debug)]
-#[serde(tag="request", content="params")]
+#[serde(tag="request", content="params", rename_all="snake_case")]
 pub enum Request {
     SetDirectory(SetDirectory),
     Http(HttpRequest),

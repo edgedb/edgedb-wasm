@@ -37,7 +37,6 @@ async fn main() -> anyhow::Result<()> {
     init_logging();
     log::debug!("Options {:#?}", options);
 
-    log::info!("Reading wasm files from {:?}", options.wasm_dir);
     let tenant = Tenant::new("default").await?;
 
     if let Some(sock) = options.unix_socket {

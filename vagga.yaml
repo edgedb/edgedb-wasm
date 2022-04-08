@@ -13,7 +13,6 @@ commands:
     environ:
       WASMTIME_BACKTRACE_DETAILS: 1
     run: [cargo, run, "--",
-      --wasm-dir=./target/wasm32-wasi/release,
       --unix-socket=./tmp/run/.s.wasm_ext,
     ]
 
