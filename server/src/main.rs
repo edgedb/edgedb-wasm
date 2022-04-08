@@ -9,6 +9,8 @@ mod module;
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use std::os::unix::io::FromRawFd;
+use std::os::unix::net::UnixListener as StdUnix;
 
 use anyhow::Context;
 use clap::Parser;
@@ -39,7 +41,20 @@ async fn main() -> anyhow::Result<()> {
 
     let tenant = Tenant::new("default").await?;
 
-    if let Some(sock) = options.unix_socket {
+    if let Some(fd) = options.fd {
+        let listener: UnixListener = unsafe { StdUnix::from_raw_fd(fd) }
+            .try_into().context("error listening fd")?;
+        loop {
+            match listener.accept().await {
+                Ok((sock, _addr)) => {
+                    tokio::spawn(unix_sock::service(sock, &tenant));
+                }
+                Err(e) => {
+                    log::error!("Error accepting unix socket: {}", e);
+                }
+            }
+        }
+    } else if let Some(sock) = options.unix_socket {
         if fs::metadata(&sock).await.is_ok() {
             fs::remove_file(&sock).await
                 .with_context(|| format!("error removing socket {sock:?}"))?;

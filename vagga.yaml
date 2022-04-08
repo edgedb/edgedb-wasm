@@ -16,6 +16,15 @@ commands:
       --unix-socket=./tmp/run/.s.wasm_ext,
     ]
 
+  run-fd: !Command
+    description: Run development server on fd/localhost:5757
+    container: ubuntu
+    prerequisites: [make-wasm]
+    pass-tcp-socket: 5657
+    environ:
+      WASMTIME_BACKTRACE_DETAILS: 1
+    run: [cargo, run, "--", --fd=3]
+
   run-release: !Command
     description: Run release build of a development server
     container: ubuntu
