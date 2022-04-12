@@ -104,7 +104,8 @@ impl Worker {
     pub fn module(&self) -> &Arc<Module> {
         &self.0.module
     }
-    pub async fn new(tenant: &Tenant, database: &str, wasm_name: &str)
+    pub async fn new(tenant: &Tenant, database: &str, wasm_name: &str,
+                     module: Arc<Module>)
         -> anyhow::Result<Worker>
     {
         let name = Arc::new(Name {
@@ -121,9 +122,6 @@ impl Worker {
             http_server_v1: Default::default(),
             client_v1: abi::client_v1::State::new(&cli),
         };
-        let module = tenant.get_module(database, wasm_name).await
-            // TODO(tailhook) better error
-            .context("cannot find module")?;
         let mut store = wasmtime::Store::new(tenant.get_engine(), state);
 
         let instance = tenant.get_linker()
@@ -139,7 +137,7 @@ impl Worker {
 
         Ok(Worker(Arc::new(WorkerInner {
             name,
-            module: module.clone(),
+            module,
             store: Mutex::new(store),
             instance,
             http_server_v1: Some(http_server_v1),

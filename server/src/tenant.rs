@@ -1,6 +1,7 @@
 pub mod http;
 
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::fmt;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -10,6 +11,7 @@ use anyhow::Context;
 use async_once_cell::OnceCell as Cell;
 use edgedb_tokio::raw::Pool;
 use tokio::fs;
+use tokio::io::AsyncReadExt;
 use tokio::sync::{RwLock, Mutex};
 
 use crate::abi;
@@ -153,60 +155,112 @@ impl Tenant {
     {
         let path = path.into();
         loop {
-            let mut result = None;
-            let cell = self.0.modules.lock().await
-                .entry(path.clone())
-                .or_insert_with(|| Arc::new(Cell::new()))
-                .clone();
+            let entry = {
+                let mut modules = self.0.modules.lock().await;
+                match modules.entry(path.clone()) {
+                    Entry::Vacant(cur) => {
+                        Err(cur.insert(Arc::new(Cell::new())).clone())
+                    }
+                    Entry::Occupied(mut cur) => {
+                        if let Some(weak) = cur.get().get() {
+                            if let Some(strong) = weak.upgrade() {
+                                Ok((cur.get().clone(), strong))
+                            } else {
+                                Err(cur.insert(Arc::new(Cell::new())).clone())
+                            }
+                        } else {
+                            Err(cur.get().clone())
+                        }
+                    }
+                }
+            };
 
-            let path = path.clone();
-            let weak = cell.get_or_try_init(async {
-                let data = fs::read(path.as_path()).await
-                    .with_context(|| format!("cannot read {path:?}"))?;
-                let wasm = wasmtime::Module::new(&self.0.engine, data)
-                    .context("cannot initialize module")?;
-                log::info!("Module {path:?} loaded");
-                let module = Arc::new(Module {
-                    path,
-                    tenant: self.0.clone(),
-                    wasm,
-                });
-                result = Some(module.clone());
-                anyhow::Ok(Arc::downgrade(&module))
-            }).await?;
-
-            // TODO(tailhook) check timestamp
-
-            // New module just inserted. We use `result` to hold strong
-            // reference
-            if let Some(module) = result {
-                return Ok(module);
+            let (cell, module) = match entry {
+                Err(cell) => {
+                    let mut result = None;
+                    let path = path.clone();
+                    let weak = cell.get_or_try_init(async {
+                        let mut file = fs::File::open(path.as_path()).await
+                            .with_context(|| format!("cannot open {path:?}"))?;
+                        let modification_time = file.metadata().await
+                            .and_then(|m| m.modified())
+                            .with_context(|| format!("cannot stat {path:?}"))?;
+                        let mut buf = Vec::with_capacity(65536);
+                        file.read_to_end(&mut buf).await
+                            .with_context(|| format!("cannot read {path:?}"))?;
+                        drop(file);
+                        let wasm = wasmtime::Module::new(&self.0.engine, buf)
+                            .context("cannot initialize module")?;
+                        log::info!("Module {path:?} loaded");
+                        let module = Arc::new(Module {
+                            path: path.clone(),
+                            tenant: self.0.clone(),
+                            modification_time,
+                            wasm,
+                        });
+                        result = Some(module.clone());
+                        anyhow::Ok(Arc::downgrade(&module))
+                    }).await?;
+                    if let Some(module) = result {
+                        return Ok(module);
+                    }
+                    if let Some(module) = weak.upgrade() {
+                        (cell, module)
+                    } else {
+                        continue; // weak ref target just dropped, restart
+                    }
+                }
+                Ok(pair) => pair,
+            };
+            // TODO(tailhook) optimize lookups that are too often
+            // TODO(tailhook) delete module immediately if file not found
+            let new = fs::metadata(path.as_path()).await?;
+            match new.modified() {
+                Ok(new) if new > module.modification_time => {
+                    let mut lock = self.0.modules.lock().await;
+                    let current_cell = lock.get(&path);
+                    if current_cell
+                        .map(|c| Arc::ptr_eq(c, &cell))
+                        .unwrap_or(false)
+                    {
+                        log::info!("Reloading {path:?}");
+                        lock.remove(&path);
+                    }
+                    continue;
+                }
+                Ok(_) => return Ok(module),
+                Err(e) => {
+                    log::warn!("Cannot get file modification time: {e:#}. \
+                                Skipping the check and do not refresh");
+                }
             }
-            if let Some(module) = weak.upgrade() {
-                return Ok(module);
-            }
-            // Weak reference was just dropped, should be very rare race
-            // condition, so retry is okay
-            continue;
         }
     }
     pub async fn get_worker(&self, database: &str, wasm_name: &str)
         -> anyhow::Result<worker::Worker>
     {
+        let module = self.get_module(database, wasm_name).await?;
         let name = worker::Name {
             database: database.into(),
             wasm_name: wasm_name.into(),
         };
         let wrks = &self.0.workers;
         if let Some(wrk) = wrks.read().await.get(&name) {
-            return Ok(wrk.clone());
+            // this checks timestamp
+            if Arc::ptr_eq(wrk.module(), &module) {
+                return Ok(wrk.clone());
+            }
         }
         let mut wrks = wrks.write().await;
         if let Some(wrk) = wrks.get(&name) {
-            return Ok(wrk.clone());
+            // This presumably has to be refreshed, but some other thread
+            // could have already done that
+            if Arc::ptr_eq(wrk.module(), &module) {
+                return Ok(wrk.clone());
+            }
         }
-        let wrk = worker::Worker::new(self, database, wasm_name).await?;
-        wrks.insert(wrk.clone());
+        let wrk = worker::Worker::new(self, database, wasm_name, module).await?;
+        wrks.replace(wrk.clone());
         Ok(wrk)
     }
 }
