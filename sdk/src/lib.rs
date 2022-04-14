@@ -1,4 +1,5 @@
 pub mod bug;
+#[cfg(feature="client")]
 pub mod client;
 pub mod http_server;
 pub mod web;
