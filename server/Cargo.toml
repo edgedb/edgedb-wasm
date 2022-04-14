@@ -11,9 +11,9 @@ default-run = "edgedb-wasm-server"
 
 [dependencies]
 edgedb-sdk = { path="../sdk", features=["host"], default-features=false }
-edgedb-tokio = { git="https://github.com/edgedb/edgedb-rust", branch="tokio", features=["unstable"], default-features=false }
-edgedb-protocol = { git="https://github.com/edgedb/edgedb-rust", branch="tokio", default-features=false }
-edgedb-errors = { git="https://github.com/edgedb/edgedb-rust", branch="tokio", default-features=false }
+edgedb-tokio = { git="https://github.com/edgedb/edgedb-rust", features=["unstable"], default-features=false }
+edgedb-protocol = { git="https://github.com/edgedb/edgedb-rust", default-features=false }
+edgedb-errors = { git="https://github.com/edgedb/edgedb-rust", default-features=false }
 bytes = { version="1.1.0", features=["serde"] }
 clap = { version="3.0.7", features=["derive"] }
 log = "0.4.14"
