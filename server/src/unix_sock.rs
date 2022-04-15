@@ -1,11 +1,11 @@
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::fmt;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::path::PathBuf;
 
 use bytes::Bytes;
 use hyper::Uri;
-use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 
@@ -21,6 +21,26 @@ pub struct Process<'a>(PhantomData<&'a ()>);
 pub enum Request {
     SetDirectory(SetDirectory),
     Http(HttpRequest),
+}
+
+#[derive(serde::Serialize, Debug)]
+#[serde(tag="response", rename_all="snake_case")]
+pub enum Signal<T> {
+    Success(T),
+    Failure { error: String },
+}
+
+impl<T: serde::Serialize, E: fmt::Display> Into<Signal<T>> for Result<T, E> {
+    fn into(self) -> Signal<T> {
+        match self {
+            Ok(val) => Signal::Success(val),
+            // TODO(tailhook) maybe hide error message?
+            Err(e) => {
+                log::warn!("Erroneous response: {e:#}");
+                Signal::Failure { error: e.to_string() }
+            }
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -88,9 +108,11 @@ impl<'a> http::Process for Process<'a> {
     }
 }
 
-async fn respond(mut sock: UnixStream, response: impl Serialize)
+async fn respond<T>(mut sock: UnixStream, response: impl Into<Signal<T>>)
     -> anyhow::Result<()>
+    where T: serde::Serialize,
 {
+    let response = response.into();
     sock.write_all(
         &serde_pickle::to_vec(&response, serde_pickle::SerOptions::new())?
     ).await?;
@@ -106,12 +128,11 @@ async fn process_request(mut sock: UnixStream, tenant: Tenant)
            serde_pickle::DeOptions::new().replace_unresolved_globals())?;
     match request {
         Request::Http(request) => {
-            let res = tenant.handle::<Process>(&request).await?;
-            respond(sock, res).await?;
+            respond(sock, tenant.handle::<Process>(&request).await).await?;
         }
         Request::SetDirectory(SetDirectory { database, directory }) => {
             tenant.set_directory(&database, &directory).await;
-            respond(sock, ()).await?;
+            respond(sock, Signal::Success(())).await?;
         }
     }
     Ok(())
