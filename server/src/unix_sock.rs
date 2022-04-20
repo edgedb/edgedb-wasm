@@ -23,6 +23,12 @@ pub enum Request {
     Http(HttpRequest),
 }
 
+// We can't use unit type instead, because we serialize `Success` as dict,
+// so anything inside should be dict-like (e.g. a structure)
+#[derive(serde::Serialize, Debug)]
+struct PyNone {
+}
+
 #[derive(serde::Serialize, Debug)]
 #[serde(tag="response", rename_all="snake_case")]
 pub enum Signal<T> {
@@ -132,7 +138,7 @@ async fn process_request(mut sock: UnixStream, tenant: Tenant)
         }
         Request::SetDirectory(SetDirectory { database, directory }) => {
             tenant.set_directory(&database, &directory).await;
-            respond(sock, Signal::Success(())).await?;
+            respond(sock, Signal::Success(PyNone {})).await?;
         }
     }
     Ok(())
