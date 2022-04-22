@@ -96,6 +96,9 @@ impl Tenant {
         } else {
             return Ok(P::err_not_found())
         };
+        if !is_valid_name(wasm_name) {
+            return Ok(P::err_not_found())
+        }
         // TODO(tailhook) capture unknown worker error and convert to 404
         let worker = self.get_worker(database, wasm_name).await?;
         worker.handle_http::<P>(cvt).await
