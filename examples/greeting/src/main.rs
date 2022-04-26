@@ -1,8 +1,8 @@
 use edgedb_sdk::{log, web};
-use edgedb_sdk::client::{Client, Error, connect};
+use edgedb_sdk::client::{Client, Error, create_client};
 use once_cell::sync::Lazy;
 
-static CLIENT: Lazy<Client> = Lazy::new(|| connect());
+static CLIENT: Lazy<Client> = Lazy::new(|| create_client());
 
 #[edgedb_sdk::init_hook]
 fn init_hook() {

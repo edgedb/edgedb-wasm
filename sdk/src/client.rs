@@ -18,7 +18,7 @@ pub struct Client {
     client: v1::Client,
 }
 
-pub fn connect() -> Client {
+pub fn create_client() -> Client {
     Client {
         client: v1::Client::connect(),
     }
