@@ -24,8 +24,8 @@ pub fn create_client() -> Client {
     }
 }
 
-impl Into<Error> for v1::Error {
-    fn into(self) -> Error {
+impl v1::Error {
+    fn into_err(self) -> Error {
         let mut err = Error::from_code(self.code);
         for msg in self.messages {
             err = err.context(msg);
@@ -52,8 +52,8 @@ impl Client {
             expected_cardinality: v1::Cardinality::Many,
         };
         let (query, _prepare_info) = self.client.prepare(flags, query)
-            .map_err(|e| e.into())?;
-        let desc = query.describe_data().map_err(|e| e.into())?;
+            .map_err(|e| e.into_err())?;
+        let desc = query.describe_data().map_err(|e| e.into_err())?;
         let desc = CommandDataDescription::try_from(desc)?;
         let inp_desc = desc.input()
             .map_err(ProtocolEncodingError::with_source)?;
@@ -64,7 +64,7 @@ impl Client {
             &mut arg_buf,
         ))?;
 
-        let data = query.execute(&arg_buf).map_err(|e| e.into())?;
+        let data = query.execute(&arg_buf).map_err(|e| e.into_err())?;
 
         let out_desc = desc.output()
             .map_err(ProtocolEncodingError::with_source)?;
