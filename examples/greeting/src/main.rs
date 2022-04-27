@@ -28,10 +28,10 @@ fn wrap_error(f: impl FnOnce() -> Result<web::Response, Error>)
 #[web::handler]
 fn handler(_req: web::Request) -> web::Response {
     wrap_error(|| {
-        let counter = CLIENT.query::<i64, _>(
+        let counter = CLIENT.query_required_single::<i64, _>(
             "SELECT (UPDATE Counter SET { value := .value + 1}).value",
             &(),
-        )?.remove(0);
+        )?;
         Ok(web::response()
             .status(web::StatusCode::OK)
             .header("Content-Type", "text/html")

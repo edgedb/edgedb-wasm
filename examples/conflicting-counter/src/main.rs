@@ -26,7 +26,7 @@ fn handler(req: web::Request) -> web::Response {
     let name = req.uri().path();
     wrap_error(|| {
         let counter = CLIENT.transaction(|tx| {
-            let val = tx.query::<i32, _>("
+            let val = tx.query_required_single::<i32, _>("
                 SELECT (
                     INSERT Counter {
                         name := <str>$0,
@@ -38,7 +38,7 @@ fn handler(req: web::Request) -> web::Response {
                     )
                 ).value
                 ", &(name,),
-            )?.remove(0);
+            )?;
             Ok(val)
         })?;
         Ok(web::response()
