@@ -67,7 +67,15 @@ resource query {
 
 resource client {
     static connect: function() -> client
+    transaction: function() -> expected<transaction, error>
     prepare: function(compilation-flags: compilation-flags, query: string)
         -> expected<tuple<query, prepare-complete>, error>
+}
+
+resource transaction {
+    prepare: function(compilation-flags: compilation-flags, query: string)
+        -> expected<tuple<query, prepare-complete>, error>
+    commit: function() -> expected<_, error>
+    rollback: function() -> expected<_, error>
 }
 

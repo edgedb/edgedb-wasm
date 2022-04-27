@@ -4,6 +4,7 @@ members = [
     "macros",
     "server",
     "examples/greeting",
+    "examples/conflicting-counter",
 ]
 exclude = ["wit-bindgen", "edgedb-rust"]
 

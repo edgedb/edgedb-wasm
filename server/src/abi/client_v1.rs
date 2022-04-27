@@ -3,6 +3,8 @@ wit_bindgen_wasmtime::export!({
     async: *,
 });
 
+use std::sync::Arc;
+
 pub use edgedb_tokio::raw::{Pool, Connection};
 use edgedb_errors::{ErrorKind, ClientError};
 use edgedb_protocol::common::{Cardinality};
@@ -27,14 +29,19 @@ pub struct State {
     tables: Tables<InnerState>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client {
     pool: Pool,
 }
 
 #[derive(Debug)]
 pub struct Query {
-    connection: Mutex<Connection>,
+    connection: Arc<Mutex<Connection>>,
+}
+
+#[derive(Debug)]
+pub struct Transaction {
+    connection: Arc<Mutex<Connection>>,
 }
 
 pub struct InnerState {
@@ -77,6 +84,7 @@ impl From<edgedb_tokio::Error> for v1::Error {
 impl v1::EdgedbClientV1 for InnerState {
     type Client = Client;
     type Query = Query;
+    type Transaction = Transaction;
     async fn client_connect(&mut self) -> Client {
         Client {
             pool: self.pool.clone(),
@@ -97,7 +105,9 @@ impl v1::EdgedbClientV1 for InnerState {
             input_typedesc_id: prepare.input_typedesc_id.to_string(),
             output_typedesc_id: prepare.input_typedesc_id.to_string(),
         };
-        let query = Query { connection: Mutex::new(connection) };
+        let query = Query {
+            connection: Arc::new(Mutex::new(connection)),
+        };
         Ok((query, prepare))
     }
     async fn query_describe_data(&mut self, query: &Query)
@@ -125,6 +135,49 @@ impl v1::EdgedbClientV1 for InnerState {
                 .map(|d| d.to_vec())
                 .collect(),
         })
+    }
+    async fn client_transaction(&mut self, me: &Client)
+        -> Result<Transaction, v1::Error>
+    {
+        let mut connection = me.pool.acquire().await?;
+        connection.statement("START TRANSACTION").await?;
+        let transaction = Transaction {
+            connection: Arc::new(Mutex::new(connection)),
+        };
+        // TODO(tailhook) mark transaction as dirty
+        Ok(transaction)
+    }
+    async fn transaction_prepare(&mut self, me: &Transaction,
+                                 flags: v1::CompilationFlags, query: &str)
+        -> Result<(Query, v1::PrepareComplete), v1::Error>
+    {
+        let mut flags = CompilationFlags::try_from(flags)?;
+        flags.allow_capabilities &= Capabilities::MODIFICATIONS;
+        let mut connection = me.connection.lock().await;
+        let prepare = connection.prepare(&flags, query).await?;
+        let prepare = v1::PrepareComplete {
+            capabilities: prepare.get_capabilities()
+                .wrap_bug("no capabilities received")?.try_into()?,
+            cardinality: prepare.cardinality.into(),
+            input_typedesc_id: prepare.input_typedesc_id.to_string(),
+            output_typedesc_id: prepare.input_typedesc_id.to_string(),
+        };
+        let query = Query { connection: me.connection.clone() };
+        Ok((query, prepare))
+    }
+    async fn transaction_commit(&mut self, me: &Transaction)
+        -> Result<(), v1::Error>
+    {
+        let mut connection = me.connection.lock().await;
+        connection.statement("COMMIT").await?;
+        Ok(())
+    }
+    async fn transaction_rollback(&mut self, me: &Transaction)
+        -> Result<(), v1::Error>
+    {
+        let mut connection = me.connection.lock().await;
+        connection.statement("ROLLBACK").await?;
+        Ok(())
     }
 }
 

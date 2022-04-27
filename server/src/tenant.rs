@@ -100,8 +100,15 @@ impl Tenant {
             return Ok(P::err_not_found())
         }
         // TODO(tailhook) capture unknown worker error and convert to 404
-        let worker = self.get_worker(database, wasm_name).await?;
-        worker.handle_http::<P>(cvt).await
+        match self.get_worker(database, wasm_name).await {
+            Ok(worker) => {
+                worker.handle_http::<P>(cvt).await
+            }
+            Err(e) => {
+                log::error!("Get worker error: {:#}", e);
+                return Ok(P::err_internal_server_error());
+            }
+        }
     }
 
     pub fn get_engine(&self) -> &wasmtime::Engine {
