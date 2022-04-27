@@ -527,7 +527,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "edgedb-errors"
 version = "0.2.0"
-source = "git+https://github.com/edgedb/edgedb-rust/#c492bcfe530c38228c2c3a7431e021823419af56"
+source = "git+https://github.com/edgedb/edgedb-rust/#a193b9ea10e4a85d2d52439e0428f27b94b443f9"
 dependencies = [
  "bytes",
 ]
@@ -535,7 +535,7 @@ dependencies = [
 [[package]]
 name = "edgedb-protocol"
 version = "0.3.0"
-source = "git+https://github.com/edgedb/edgedb-rust/#c492bcfe530c38228c2c3a7431e021823419af56"
+source = "git+https://github.com/edgedb/edgedb-rust/#a193b9ea10e4a85d2d52439e0428f27b94b443f9"
 dependencies = [
  "bitflags",
  "bytes",
@@ -573,8 +573,8 @@ dependencies = [
 
 [[package]]
 name = "edgedb-tokio"
-version = "0.2.0"
-source = "git+https://github.com/edgedb/edgedb-rust/#c492bcfe530c38228c2c3a7431e021823419af56"
+version = "0.2.1"
+source = "git+https://github.com/edgedb/edgedb-rust/#a193b9ea10e4a85d2d52439e0428f27b94b443f9"
 dependencies = [
  "anyhow",
  "async-trait",
