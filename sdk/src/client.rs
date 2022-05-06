@@ -1,9 +1,14 @@
+//! Client to the EdgeDB
+//!
+//! This is a major way to contact the database. Database credentials always
+//! come preconfigured to connect to the specific database that this WebAssembly
+//! file was run from.
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
 
-pub use edgedb_errors::{Error, ErrorKind};
+pub use edgedb_errors::{self as errors, Error, ErrorKind};
 pub use edgedb_protocol::QueryResult;
 pub use edgedb_protocol::common::Cardinality;
 pub use edgedb_protocol::features::ProtocolVersion;
@@ -22,11 +27,17 @@ mod transaction;
 use edgedb_client_v1 as v1;
 use transaction::{Transaction, transaction};
 
+/// EdgeDB Client
+///
+/// Internally it contains a connection pool.
+///
+/// To create client, use [`create_client`] function.
 #[derive(Debug, Clone)]
 pub struct Client {
     client: Arc<v1::Client>,
 }
 
+/// Create a connection to the database that this WebAssembly app is attached to
 pub fn create_client() -> Client {
     Client {
         client: Arc::new(v1::Client::connect()),
@@ -299,9 +310,9 @@ impl Client {
     ///
     /// The query must return exactly one element. If the query returns more
     /// than one element, a
-    /// [`ResultCardinalityMismatchError`][crate::errors::ResultCardinalityMismatchError]
+    /// [`ResultCardinalityMismatchError`][crate::client::errors::ResultCardinalityMismatchError]
     /// is raised. If the query returns an empty set, a
-    /// [`NoDataError`][crate::errors::NoDataError] is raised.
+    /// [`NoDataError`][crate::client::errors::NoDataError] is raised.
     ///
     /// You will usually have to specify the return type for the query:
     ///
@@ -341,7 +352,7 @@ impl Client {
     ///
     /// The query must return exactly one element. If the query returns more
     /// than one element, a
-    /// [`ResultCardinalityMismatchError`][crate::errors::ResultCardinalityMismatchError]
+    /// [`ResultCardinalityMismatchError`][crate::client::errors::ResultCardinalityMismatchError]
     /// is raised.
     pub fn query_single_json(&self,
                                    query: &str, arguments: &impl QueryArgs)
@@ -354,9 +365,9 @@ impl Client {
     ///
     /// The query must return exactly one element. If the query returns more
     /// than one element, a
-    /// [`ResultCardinalityMismatchError`][crate::errors::ResultCardinalityMismatchError]
+    /// [`ResultCardinalityMismatchError`][crate::client::errors::ResultCardinalityMismatchError]
     /// is raised. If the query returns an empty set, a
-    /// [`NoDataError`][crate::errors::NoDataError] is raised.
+    /// [`NoDataError`][crate::client::errors::NoDataError] is raised.
     pub fn query_required_single_json(&self,
                                    query: &str, arguments: &impl QueryArgs)
         -> Result<Json, Error>

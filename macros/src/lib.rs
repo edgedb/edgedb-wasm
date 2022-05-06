@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 use proc_macro_error::emit_error;
 use quote::quote;
 
+/// Register web handler
 #[proc_macro_error::proc_macro_error]
 #[proc_macro_attribute]
 pub fn web_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -20,6 +21,27 @@ pub fn web_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     }.into()
 }
 
+/// Mark function to run at wasm initialization
+///
+/// In Rust it's uncommon to have init hooks. For most global initialization
+/// you can use [`once_cell`]'s or [`lazy_static`]'s.
+///
+/// There are two cases where init hooks are needed:
+///
+/// 1. To register handlers. In most cases, more specific registrators should be
+///    used though (e.g. [`web_handler`](macro@web_handler)).
+/// 2. For smaller latency during request processing (but see below).
+///
+/// # Influence on Request Latency
+///
+/// Note: while we will provide request processing latency metric distinct from
+/// the initialization time, this may not have the desired effect on users'
+/// experience. When request comes in and there is no preinitialized worker,
+/// it's likely that user request will need to wait for worker initialization.
+/// (We can also employ some techniques to optimize this too).
+///
+/// [`once_cell`]: https://crates.io/crates/once_cell
+/// [`lazy_static`]: https://crates.io/crates/lazy_static
 #[proc_macro_error::proc_macro_error]
 #[proc_macro_attribute]
 pub fn init_hook(_attr: TokenStream, item: TokenStream) -> TokenStream {
