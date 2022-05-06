@@ -7,7 +7,7 @@ name: Release edgedb-sdk
 
 jobs:
   test_and_publish:
-    uses: ./.github/workflows/publish.yml@test_and_publish
+    uses: ./.github/workflows/publish.yml
     with:
       crate: edgedb-sdk
     secrets: inherit
