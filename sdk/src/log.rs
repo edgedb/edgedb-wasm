@@ -1,6 +1,15 @@
+//! Logging for WebAsssembly application
+//!
+//! This module is mostly re-export of the [`log`](mod@log) crate. The most
+//! important exception is that logging is expected to be controlled from host.
+//! So logger and max-level changes are allowed via this API.
+//!
 #![cfg_attr(feature="host", allow(dead_code))]
 
-pub use log::*;
+pub use log::{debug, error, info, log, log_enabled, trace, warn};
+pub use log::{Record, RecordBuilder, Metadata, MetadataBuilder};
+pub use log::{Level, LevelFilter, STATIC_MAX_LEVEL};
+pub use log::{logger, max_level};
 
 wit_bindgen_rust::import!("../wit/edgedb_log_v1.wit");
 
