@@ -1,0 +1,13 @@
+on:
+  push:
+    tags:
+    - releases/edgedb-sdk-macros/v*
+
+name: Release edgedb-sdk-macros
+
+jobs:
+  test_and_publish:
+    uses: ./.github/workflows/publish.yml@test_and_publish
+    with:
+      crate: edgedb-sdk-macros
+    secrets: inherit
