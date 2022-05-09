@@ -7,7 +7,37 @@ name: Release edgedb-sdk
 
 jobs:
   test_and_publish:
-    uses: ./.github/workflows/publish.yml
-    with:
-      crate: edgedb-sdk
-    secrets: inherit
+    name: Test and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.58
+          default: true
+      - name: "Get bindgen revision"
+        run: |
+          echo "BINDGEN_VER=$(grep -Pm1 --only-matching
+            '(?<=git\+https://github.com/bytecodealliance/wit-bindgen/\#).*(?=")'
+            Cargo.lock
+          )" >> $GITHUB_ENV
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: wit-bindgen-cli https://github.com/bytecodealliance/wit-bindgen --rev=${{ env.BINDGEN_VER }}
+      - name: "Generate bindings"
+        run: ./bindgen_replace.sh
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - run: |
+          set -x
+          cargo_version="$(cargo metadata --format-version 1 \
+            | jq -r '.packages[] | select(.name=="${{ inputs.crate }}") | .version')"
+          tag_version="${GITHUB_REF#refs/tags/releases/${{ inputs.crate }}/v}"
+          test "$cargo_version" = "$tag_version"
+
+      - working-directory: ./${{ inputs.crate }}
+        run: |
+          cargo publish --token=${{ secrets.CARGO_REGISTRY_TOKEN }}
