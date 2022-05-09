@@ -53,7 +53,7 @@ fn convert_filter(value: Option<v1::Level>) -> log::LevelFilter {
 }
 
 #[cfg(not(feature="host"))]
-pub fn init() {
+pub(crate) fn init() {
     let level = convert_filter(v1::max_level());
     unsafe {
         // not sure if safe all all platforms

@@ -41,6 +41,7 @@
 
 mod http_server;
 mod bug;
+mod bindgen;
 
 #[cfg(feature="client")]
 pub mod client;
