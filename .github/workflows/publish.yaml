@@ -8,8 +8,6 @@ on:
       CARGO_REGISTRY_TOKEN:
         required: true
 
-name: Release ${{ inputs.crate }}
-
 jobs:
   test_and_publish:
     name: Test and publish
