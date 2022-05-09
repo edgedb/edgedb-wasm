@@ -44,9 +44,13 @@ commands:
 
   wit-bindgen: !Command
     description: Run wit-bindgen command
-    symlink-name: cargo
     container: tools
     run: [wit-bindgen]
+
+  wit-gen: !Command
+    description: Run a bash script to generate wit bindings
+    container: tools
+    run: [./bindgen_replace.sh]
 
   check: !Command
     description: Run cargo check (includes wasm)
