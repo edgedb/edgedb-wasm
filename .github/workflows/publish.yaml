@@ -4,6 +4,9 @@ on:
       crate:
         required: true
         type: string
+      dir:
+        required: true
+        type: string
     secrets:
       CARGO_REGISTRY_TOKEN:
         required: true
@@ -29,6 +32,6 @@ jobs:
           tag_version="${GITHUB_REF#refs/tags/releases/${{ inputs.crate }}/v}"
           test "$cargo_version" = "$tag_version"
 
-      - working-directory: ./${{ inputs.crate }}
+      - working-directory: ./${{ inputs.dir }}
         run: |
           cargo publish --token=${{ secrets.CARGO_REGISTRY_TOKEN }}

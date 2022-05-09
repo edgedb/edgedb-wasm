@@ -10,4 +10,5 @@ jobs:
     uses: ./.github/workflows/publish.yaml
     with:
       crate: edgedb-sdk-macros
+      dir: macros
     secrets: inherit
