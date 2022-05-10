@@ -18,14 +18,14 @@ jobs:
           default: true
       - name: "Get bindgen revision"
         run: |
-          echo "BINDGEN_VER=$(grep -Pm1 --only-matching
-            '(?<=git\+https://github.com/bytecodealliance/wit-bindgen/\#).*(?=")'
+          echo "BINDGEN_VER=$(grep -Pm1 --only-matching \
+            '(?<=git\+https://github.com/bytecodealliance/wit-bindgen/\#).*(?=")' \
             Cargo.lock
           )" >> $GITHUB_ENV
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: wit-bindgen-cli https://github.com/bytecodealliance/wit-bindgen --rev=${{ env.BINDGEN_VER }}
+          args: wit-bindgen-cli --git=https://github.com/bytecodealliance/wit-bindgen --rev=${{ env.BINDGEN_VER }}
       - name: "Generate bindings"
         run: ./bindgen_replace.sh
       - uses: actions-rs/cargo@v1
