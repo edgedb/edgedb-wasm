@@ -29,7 +29,7 @@ fn wrap_error(f: impl FnOnce() -> Result<web::Response, Error>)
 fn handler(_req: web::Request) -> web::Response {
     wrap_error(|| {
         let counter = CLIENT.query_required_single::<i64, _>(
-            "SELECT (UPDATE Counter SET { value := .value + 1}).value",
+            "SELECT (UPDATE Counter SET { value := .value + 1}).value LIMIT 1",
             &(),
         )?;
         Ok(web::response()
