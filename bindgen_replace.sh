@@ -20,7 +20,13 @@ grep -R '^wit_bindgen_rust' sdk | while read line; do
     ' "$filename"
 done
 rm bindings.rs
+
+sed -i '
+    /^#\[cfg(feature="bindgen")\]/D
+' sdk/src/lib.rs
+
 sed -i '
     /^wit-bindgen-rust/i bitflags = "1.3.2"
     /^wit-bindgen-rust/D
 ' sdk/Cargo.toml
+
