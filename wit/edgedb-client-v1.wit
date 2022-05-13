@@ -75,7 +75,7 @@ resource client {
 resource transaction {
     prepare: function(compilation-flags: compilation-flags, query: string)
         -> expected<tuple<query, prepare-complete>, error>
-    commit: function() -> expected<_, error>
-    rollback: function() -> expected<_, error>
+    commit: function() -> expected<unit, error>
+    rollback: function() -> expected<unit, error>
 }
 

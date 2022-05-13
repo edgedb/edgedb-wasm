@@ -101,7 +101,7 @@ impl<'a> http::Process for Process<'a> {
         Response {
             status: hyper::StatusCode::NOT_FOUND.as_u16(),
             headers: HashMap::new(),
-            body: Some(b"Try /db/<database>/<wasm-file-name>/"[..].into()),
+            body: Some(b"Try /db/<database>/wasm/<wasm-file-name>/"[..].into()),
         }
     }
     fn err_internal_server_error() -> Self::Output {

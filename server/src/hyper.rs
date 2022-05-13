@@ -38,7 +38,7 @@ impl<'a> http::Process for Process<'a> {
         // TODO(tailhook) only in debug mode
         hyper::Response::builder()
             .status(hyper::StatusCode::NOT_FOUND)
-            .body(b"Try /db/default/<wasm-file-name>/"[..].into())
+            .body(b"Try /db/edgedb/wasm/<wasm-file-name>/"[..].into())
             .expect("can compose static response")
     }
     fn err_internal_server_error() -> Self::Output {

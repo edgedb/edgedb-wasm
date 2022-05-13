@@ -148,7 +148,6 @@ impl Worker {
     {
         if let Some(api) = &self.0.http_server_v1 {
             let response;
-            // TODO(tailhook) on poison restart worker
             let mut store = self.0.store.lock().await;
             match api.handle_request(&mut *store, req.as_v1()).await {
                 Ok(resp) => response = resp,
