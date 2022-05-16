@@ -10,8 +10,8 @@ description = """
 
 [dependencies]
 edgedb-sdk-macros = {path="../macros", version="0.1.0"}
-edgedb-protocol = { version="0.3.0", optional=true }
-edgedb-errors = { version="0.2.0", optional=true }
+edgedb-protocol = { git="https://github.com/edgedb/edgedb-rust", optional=true }
+edgedb-errors = { git="https://github.com/edgedb/edgedb-rust", optional=true }
 http = {version="0.2.6", default-features=false}
 anyhow = "1.0.52"
 thiserror = "1.0.30"

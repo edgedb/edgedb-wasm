@@ -39,7 +39,13 @@ async fn main() -> anyhow::Result<()> {
     init_logging();
     log::debug!("Options {:#?}", options);
 
-    let tenant = Tenant::new("default").await?;
+    let mut builder = edgedb_tokio::Builder::uninitialized();
+    if let Some(unix_path) = options.edgedb_socket {
+        builder.unix_path(unix_path, None, false);
+    } else {
+        builder.host_port(Some("localhost"), Some(5656));
+    }
+    let tenant = Tenant::new("default", builder).await?;
 
     if let Some(fd) = options.fd {
         let listener: UnixListener = unsafe { StdUnix::from_raw_fd(fd) }
