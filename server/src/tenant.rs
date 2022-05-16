@@ -25,6 +25,7 @@ type Database = String;
 pub struct Tenant(Arc<TenantInner>);
 
 pub struct TenantInner {
+    config: edgedb_tokio::Builder,
     workers: RwLock<HashSet<worker::Worker>>,
     clients: RwLock<HashMap<Database, Pool>>,
     directories: RwLock<HashMap<String, PathBuf>>,
@@ -44,7 +45,7 @@ fn is_valid_name(name: &str) -> bool {
 }
 
 impl Tenant {
-    pub async fn new(_name: &str)
+    pub async fn new(_name: &str, config: edgedb_tokio::Builder)
         -> anyhow::Result<Tenant>
     {
         let engine = wasmtime::Engine::new(
@@ -63,6 +64,7 @@ impl Tenant {
             .context("error linking edgedb_http_server_v1")?;
 
         Ok(Tenant(Arc::new(TenantInner {
+            config,
             workers: RwLock::new(HashSet::new()),
             clients: RwLock::new(HashMap::new()),
             modules: Mutex::new(HashMap::new()),
@@ -140,10 +142,8 @@ impl Tenant {
             return Ok(pool.clone());
         }
         // TODO(tailhook) fix connection credentials
-        let mut builder = edgedb_tokio::Builder::uninitialized();
-        builder.host_port(Some("localhost"), Some(5656));
+        let mut builder = self.0.config.clone();
         builder.database(database);
-        builder.insecure_dev_mode(true);
         let pool = Pool::new(&builder.build()?);
         let mut clis = clis.write().await;
         Ok(clis.entry(database.into())

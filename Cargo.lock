@@ -527,16 +527,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "edgedb-errors"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc4f4d37628395caa4d6df676ad7f08f3245e9f7e2fa9001fe102c46af3a1c80"
-dependencies = [
- "bytes",
-]
-
-[[package]]
-name = "edgedb-errors"
-version = "0.2.1"
-source = "git+https://github.com/edgedb/edgedb-rust#12a2703dc69821455faccb628d6d3bafdbdf3e51"
+source = "git+https://github.com/edgedb/edgedb-rust#af0b4335550c477d741317d9311f31a421182771"
 dependencies = [
  "bytes",
 ]
@@ -544,24 +535,11 @@ dependencies = [
 [[package]]
 name = "edgedb-protocol"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1199b0721ee05fd36296b62bc8c665a438e3bbd8a197eec25a85397a896593f5"
+source = "git+https://github.com/edgedb/edgedb-rust#af0b4335550c477d741317d9311f31a421182771"
 dependencies = [
  "bitflags",
  "bytes",
- "edgedb-errors 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "snafu",
- "uuid",
-]
-
-[[package]]
-name = "edgedb-protocol"
-version = "0.3.0"
-source = "git+https://github.com/edgedb/edgedb-rust#12a2703dc69821455faccb628d6d3bafdbdf3e51"
-dependencies = [
- "bitflags",
- "bytes",
- "edgedb-errors 0.2.1 (git+https://github.com/edgedb/edgedb-rust)",
+ "edgedb-errors",
  "snafu",
  "uuid",
 ]
@@ -571,16 +549,16 @@ name = "edgedb-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bitflags",
  "bytes",
- "edgedb-errors 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "edgedb-protocol 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "edgedb-errors",
+ "edgedb-protocol",
  "edgedb-sdk-macros",
  "http",
  "log",
  "once_cell",
  "thiserror",
  "uuid",
+ "wit-bindgen-rust",
 ]
 
 [[package]]
@@ -596,14 +574,14 @@ dependencies = [
 [[package]]
 name = "edgedb-tokio"
 version = "0.2.1"
-source = "git+https://github.com/edgedb/edgedb-rust#12a2703dc69821455faccb628d6d3bafdbdf3e51"
+source = "git+https://github.com/edgedb/edgedb-rust#af0b4335550c477d741317d9311f31a421182771"
 dependencies = [
  "anyhow",
  "async-trait",
  "base16ct",
  "bytes",
- "edgedb-errors 0.2.1 (git+https://github.com/edgedb/edgedb-rust)",
- "edgedb-protocol 0.3.0 (git+https://github.com/edgedb/edgedb-rust)",
+ "edgedb-errors",
+ "edgedb-protocol",
  "log",
  "rand 0.8.5",
  "rustls",
@@ -632,8 +610,8 @@ dependencies = [
  "async-trait",
  "bytes",
  "clap",
- "edgedb-errors 0.2.1 (git+https://github.com/edgedb/edgedb-rust)",
- "edgedb-protocol 0.3.0 (git+https://github.com/edgedb/edgedb-rust)",
+ "edgedb-errors",
+ "edgedb-protocol",
  "edgedb-sdk",
  "edgedb-tokio",
  "env_logger 0.9.0",
@@ -1054,9 +1032,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
+checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
 
 [[package]]
 name = "ittapi-rs"
@@ -1270,9 +1248,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "os_str_bytes"
-version = "6.0.0"
+version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
+checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
 
 [[package]]
 name = "paste"
@@ -1443,9 +1421,9 @@ dependencies = [
 
 [[package]]
 name = "rayon"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd249e82c21598a9a426a4e00dd7adc1d640b22445ec8545feef801d1a74c221"
+checksum = "bd99e5772ead8baa5215278c9b15bf92087709e9c1b2d1f97cdb5a183c933a7d"
 dependencies = [
  "autocfg",
  "crossbeam-deque",
@@ -1455,9 +1433,9 @@ dependencies = [
 
 [[package]]
 name = "rayon-core"
-version = "1.9.2"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f51245e1e62e1f1629cbfec37b5793bbabcaeb90f30e94d2ba03564687353e4"
+checksum = "258bcdb5ac6dad48491bb2992db6b7cf74878b0384908af124823d118c99683f"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-deque",
@@ -1588,9 +1566,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.20.4"
+version = "0.20.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fbfeb8d0ddb84706bc597a5574ab8912817c52a397f819e5b614e2265206921"
+checksum = "a024a432ae760ab3bff924ad91ce1cfa52cb57ed16e1ef32d0d249cfee1a6c13"
 dependencies = [
  "log",
  "ring",
@@ -1630,9 +1608,9 @@ dependencies = [
 
 [[package]]
 name = "ryu"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73b4b750c782965c211b42f022f59af1fbceabdd026623714f104152f1ec149f"
+checksum = "f3f6f92acf49d1b98f7a81226834412ada05458b7364277387724a237f062695"
 
 [[package]]
 name = "schannel"
@@ -2029,9 +2007,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0edfdeb067411dba2044da6d1cb2df793dd35add7888d73c16e3381ded401764"
+checksum = "f988a1a1adc2fb21f9c12aa96441da33a1728193ae0b95d2be22dbd17fcb4e5c"
 dependencies = [
  "bytes",
  "futures-core",
@@ -2733,6 +2711,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wit-bindgen-gen-rust-wasm"
+version = "0.1.0"
+source = "git+https://github.com/bytecodealliance/wit-bindgen/#458a664bce7b2064d61fbd594efb2673d3130316"
+dependencies = [
+ "heck 0.3.3",
+ "wit-bindgen-gen-core",
+ "wit-bindgen-gen-rust",
+]
+
+[[package]]
 name = "wit-bindgen-gen-wasmtime"
 version = "0.1.0"
 source = "git+https://github.com/bytecodealliance/wit-bindgen/#458a664bce7b2064d61fbd594efb2673d3130316"
@@ -2740,6 +2728,27 @@ dependencies = [
  "heck 0.3.3",
  "wit-bindgen-gen-core",
  "wit-bindgen-gen-rust",
+]
+
+[[package]]
+name = "wit-bindgen-rust"
+version = "0.1.0"
+source = "git+https://github.com/bytecodealliance/wit-bindgen/#458a664bce7b2064d61fbd594efb2673d3130316"
+dependencies = [
+ "async-trait",
+ "bitflags",
+ "wit-bindgen-rust-impl",
+]
+
+[[package]]
+name = "wit-bindgen-rust-impl"
+version = "0.1.0"
+source = "git+https://github.com/bytecodealliance/wit-bindgen/#458a664bce7b2064d61fbd594efb2673d3130316"
+dependencies = [
+ "proc-macro2",
+ "syn",
+ "wit-bindgen-gen-core",
+ "wit-bindgen-gen-rust-wasm",
 ]
 
 [[package]]
