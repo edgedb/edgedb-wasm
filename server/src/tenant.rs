@@ -104,6 +104,7 @@ impl Tenant {
         // TODO(tailhook) capture unknown worker error and convert to 404
         match self.get_worker(database, wasm_name).await {
             Ok(worker) => {
+                log::debug!("Worker for {database:?} name {wasm_name:?} found");
                 worker.handle_http::<P>(cvt).await
             }
             Err(e) => {
