@@ -4,7 +4,9 @@ commands:
     description: Run development server
     container: ubuntu
     prerequisites: [make-wasm]
-    run: [cargo, run, "--", --wasm-dir=./target/wasm32-wasi/release]
+    run: [cargo, run, "--",
+      --wasm-dir=./target/wasm32-wasi/release,
+      --edgedb-socket=./tmp/run/.s.EDGEDB.admin.5656]
 
   run-unix: !Command
     description: Run development server on unix socket

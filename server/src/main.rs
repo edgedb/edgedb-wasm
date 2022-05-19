@@ -11,6 +11,7 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::os::unix::io::FromRawFd;
 use std::os::unix::net::UnixListener as StdUnix;
+use std::env;
 
 use anyhow::Context;
 use clap::Parser;
@@ -27,9 +28,11 @@ pub fn init_logging() {
     let mut builder = env_logger::Builder::from_env(
         env_logger::Env::default().default_filter_or("warn")
     );
-    builder.filter_module("tide", log::LevelFilter::Info);
-    builder.filter_module("wasm", log::LevelFilter::Info);
-    builder.filter_module("edgedb_wasm_server", log::LevelFilter::Info);
+    if env::var_os("RUST_LOG").is_none() {
+        builder.filter_module("tide", log::LevelFilter::Info);
+        builder.filter_module("wasm", log::LevelFilter::Info);
+        builder.filter_module("edgedb_wasm_server", log::LevelFilter::Info);
+    }
     builder.init();
 }
 
