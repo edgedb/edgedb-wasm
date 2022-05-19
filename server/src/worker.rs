@@ -158,7 +158,7 @@ impl Worker {
                     return Ok(P::err_internal_server_error())
                 }
             };
-            log::debug!("Response generated, code: {response.status_code:?}");
+            log::debug!("Response generated, code: {:?}", response.status_code);
             match http::FromWasm::from_wasm(response) {
                 Ok(resp) => Ok(resp),
                 Err(e) => {
