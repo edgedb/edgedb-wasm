@@ -137,7 +137,9 @@ async fn process_request(mut sock: UnixStream, tenant: Tenant)
            serde_pickle::DeOptions::new().replace_unresolved_globals())?;
     match request {
         Request::Http(request) => {
-            respond(sock, tenant.handle::<Process>(&request).await).await?;
+            let response = tenant.handle::<Process>(&request).await;
+            log::debug!("Request handled");
+            respond(sock, response).await?;
         }
         Request::SetDirectory(SetDirectory { database, directory }) => {
             tenant.set_directory(&database, &directory).await;
@@ -172,6 +174,7 @@ impl http::ConvertInput for ConvertRequest<'_> {
 
 impl http::FromWasm for Response {
     fn from_wasm(wasm: v1::Response) -> anyhow::Result<Self> {
+        log::debug!("Converting response");
         Ok(Response {
             status: wasm.status_code,
             headers: wasm.headers.into_iter()
