@@ -122,6 +122,8 @@ async fn respond<T>(mut sock: UnixStream, response: impl Into<Signal<T>>)
     sock.write_all(
         &serde_pickle::to_vec(&response, serde_pickle::SerOptions::new())?
     ).await?;
+    log::debug!("Debug written");
+    drop(sock);
     Ok(())
 }
 
