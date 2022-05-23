@@ -16,6 +16,8 @@ use crate::tenant::http::{self, ConvertInput as _};
 #[derive(Clone)]
 pub struct Worker(Arc<WorkerInner>);
 
+pub struct LogGuard(&'static str);
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Name {
     pub database: String,
@@ -36,6 +38,12 @@ struct WorkerInner {
     #[allow(dead_code)] // TODO
     instance: Instance,
     http_server_v1: Option<abi::http_server_v1::Handler<State>>,
+}
+
+impl Drop for LogGuard {
+    fn drop(&mut self) {
+        log::debug!("Finished {}", self.0)
+    }
 }
 
 impl State {
@@ -148,6 +156,7 @@ impl Worker {
     {
         if let Some(api) = &self.0.http_server_v1 {
             let response;
+            let _log_guard = LogGuard("handle_http");
             let mut store = self.0.store.lock().await;
             match api.handle_request(&mut *store, req.as_v1()).await {
                 Ok(resp) => response = resp,
