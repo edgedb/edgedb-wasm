@@ -119,10 +119,11 @@ async fn respond<T>(mut sock: UnixStream, response: impl Into<Signal<T>>)
     where T: serde::Serialize,
 {
     let response = response.into();
+    log::debug!("Writing response");
     sock.write_all(
         &serde_pickle::to_vec(&response, serde_pickle::SerOptions::new())?
     ).await?;
-    log::debug!("Debug written");
+    log::debug!("Response written");
     drop(sock);
     Ok(())
 }
