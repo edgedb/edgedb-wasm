@@ -51,8 +51,10 @@ async fn main() -> anyhow::Result<()> {
     let tenant = Tenant::new("default", builder).await?;
 
     if let Some(fd) = options.fd {
-        let listener: UnixListener = unsafe { StdUnix::from_raw_fd(fd) }
-            .try_into().context("error listening fd")?;
+        let listener = unsafe { StdUnix::from_raw_fd(fd) };
+        listener.set_nonblocking(true).context("error unblocking socket")?;
+        let listener: UnixListener = listener.try_into()
+            .context("error listening fd")?;
         loop {
             match listener.accept().await {
                 Ok((sock, _addr)) => {
